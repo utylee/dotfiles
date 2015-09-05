@@ -14,6 +14,7 @@ alias scn='screen -h 3000'
 alias vi='vim --servername VIM '
 alias vir='vi --remote '
 alias py='python '
+alias open='reattach-to-user-namespace open'
 
 #alias mvim='open -a MacVim'
 #alias vim="open \"mvim://open?url=file://$1\""
