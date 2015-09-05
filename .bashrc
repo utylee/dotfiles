@@ -14,6 +14,7 @@ alias scn='screen -h 3000'
 alias vi='vim --servername VIM '
 alias vir='vi --remote '
 alias py='python '
+
 #alias mvim='open -a MacVim'
 #alias vim="open \"mvim://open?url=file://$1\""
 #alias vi="mvim -v --servername VIM --remote "
@@ -24,4 +25,9 @@ export CLICOLOR=1
 parse_git_branch() {
    git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/(\1)/'
 }
+
+#tmux workspace shortcut
+alias t1='~/.tmuxset-misc'
+alias t2='~/.tmuxset-trader'
+
 
