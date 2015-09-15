@@ -3,7 +3,7 @@
 # vTRADER라는 이름을 가진 윈도우를 생성하고 vim을 실행시킵니다
 #tmux new-session -s vTRADER -d 
 tmux new-window -d -n vTRADER
-tmux send-keys -t vTRADER "vi" Enter
+tmux send-keys -t vTRADER "vis" Enter
 
 # 수평분할을 25%로 합니다 
 tmux split-window -d -t vTRADER -v -p 25  #"workon misc"

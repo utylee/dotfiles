@@ -2,6 +2,7 @@ set nocompatible
 "source $VIMRUNTIME/vimrc_example.vim
 "source $VIMRUNTIME/mswin.vim
 "behave mswin
+
 set backspace=indent,eol,start
 
 " bashrc 의 alias를 읽기 위한 설정입니다
@@ -157,11 +158,14 @@ if has("gui_running")
 endif
 
 set noshellslash
-map <F5> : !python3 %<CR>
+"map <F5> : !python3 %<CR>
 "nmap <leader>e :!python3 %<CR>
 "nmap <leader>e :!python3 '%:p'<CR>
 "nmap <leader>e :set shellcmdflag=-ic <CR> :!ts python '%'<CR> <CR> :set shellcmdflag=-c<CR>
-nmap <leader>e :!ts python '%:p' 2>/dev/null<CR> <CR>
+"nmap <leader>e :!ts python '%:p' 2>/dev/null<CR> <CR>
+nmap <leader>e :!ts python '%' 2>/dev/null<CR> <CR>
+"현재 행을 실행하는 커맨드인데 공백제거가 안돼 아직 제대로 되지 않습니다
+nmap <leader>w :exec '!ts python -c \"'getline('.')'\"'<CR>
 nmap <leader>` :set fullscreen<CR>
 nmap <leader>q :bd!<CR>
 map <F7> :NERDTreeTabsToggle<CR>

@@ -11,10 +11,13 @@ alias od='TERM=xterm-256color-italic ssh odroid@192.168.0.207'
 alias win='ssh 10.211.55.3'
 alias openelec='ssh root@192.168.0.39'
 alias scn='screen -h 3000'
-alias vi='vim --servername VIM '
-alias vir='vi --remote '
+alias vis='vim --servername VIM '
+#alias vir='vim --servername VIM --remote '
+alias vir='vis --remote '
 alias py='python '
 alias open='reattach-to-user-namespace open'
+#mount odroid의 약자 mod 를 사용합니다
+alias mod='sshfs odroid@192.168.0.207:/home/odroid ~/mnt'
 
 #alias mvim='open -a MacVim'
 #alias vim="open \"mvim://open?url=file://$1\""
