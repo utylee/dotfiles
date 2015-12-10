@@ -170,6 +170,7 @@ nmap <leader>` :set fullscreen<CR>
 nmap <leader>q :bd!<CR>
 map <F7> :NERDTreeTabsToggle<CR>
 map <F2> :NERDTreeToggle<CR>
+nnoremap <leader>5 :GundoToggle<CR>
 nmap <leader>2 :NERDTreeToggle<CR>
 map <F1> :e $MYVIMRC<CR>
 nmap <leader>1 :e $MYVIMRC<CR>

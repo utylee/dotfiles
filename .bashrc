@@ -6,6 +6,8 @@ export TERM=xterm-256color-italic
 
 alias ll='ls -lhF'
 alias pi='ssh pi@192.168.0.208'
+alias piw='ssh pi@192.168.0.209'
+alias lu='ssh utylee@192.168.0.201'
 alias od='TERM=xterm-256color-italic ssh odroid@192.168.0.207'
 #alias win='ssh 192.168.0.104'
 alias win='ssh 10.211.55.3'
@@ -18,6 +20,7 @@ alias py='python '
 alias open='reattach-to-user-namespace open'
 #mount odroid의 약자 mod 를 사용합니다
 alias mod='sshfs odroid@192.168.0.207:/home/odroid ~/mnt'
+alias canon='cd /Volumes/NO\ NAME/DCIM/100CANON'
 
 #alias mvim='open -a MacVim'
 #alias vim="open \"mvim://open?url=file://$1\""
