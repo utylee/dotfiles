@@ -22,6 +22,8 @@ alias open='reattach-to-user-namespace open'
 alias mod='sshfs odroid@192.168.0.207:/home/odroid ~/mnt'
 alias canon='cd /Volumes/NO\ NAME/DCIM/100CANON'
 
+#osx에서의 한글grep
+alias hgrep='iconv -c -f UTF-8-MAC -t UTF-8 | grep'
 #alias mvim='open -a MacVim'
 #alias vim="open \"mvim://open?url=file://$1\""
 #alias vi="mvim -v --servername VIM --remote "
@@ -36,5 +38,6 @@ parse_git_branch() {
 #tmux workspace shortcut
 alias t1='~/.tmuxset-misc'
 alias t2='~/.tmuxset-trader'
+alias t3='~/.tmuxset-win'
 
 
