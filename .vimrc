@@ -89,6 +89,8 @@ set guicolors
 
 "==================================================================
 
+"plugin 관리 플러그인. bundle/autoload 내에 pathogen clone 후 아래 구문만
+"추가하면 bundle 폴더내의 폴더로 그냥 쉽게 관리됨
 execute pathogen#infect()
 
 filetype plugin indent on
@@ -200,7 +202,8 @@ let g:ctrlp_custom_ignore = {
 "let g:ctrlp_working_path_mode = 'r'
 
 " Use a leader instead of the actual named binding
-nmap <leader>f :CtrlP<cr>
+" 자꾸 팅겨서 명령어 자체를 임시로 제거합니다
+"nmap <leader>f :CtrlP<cr>  
 
 " Easy bindings for its various modes
 nmap <leader>b :CtrlPBuffer<cr>
