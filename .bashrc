@@ -1,11 +1,16 @@
 export WORKON_HOME=~/.virtualenvs
 #vim 에서 ctrlp \f 파일찾기 명령 오류로 찾아보니 homebrew doctor 명령에서도 지적했듯이 venvwrapper환경에서 
 # python을 python3 로 가리키는 것이 문제라고 힌트를 줬는데 ctrlp 도 같은 문제인듯 싶다
-export VIRTUALENVWRAPPER_PYTHON=/usr/local/bin/python3
+#export VIRTUALENVWRAPPER_PYTHON=/usr/local/bin/python3
+export VIRTUALENVWRAPPER_PYTHON=/usr/local/bin/python
 #export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python
 source /usr/local/bin/virtualenvwrapper.sh
+#source /usr/local/bin/pyenv-virtualenvwrapper
 source ~/.bash/functions
-export TERM=xterm-256color-italic
+
+#vim 8.0 업데이트 이후 tic ...terminfo 실행했는데도 불구하고 tmux 상에서 적용이 잘안되어서 변경해봅니다
+#export TERM=xterm-256color-italic
+export TERM=screen-256color-italic
 
 alias ll='ls -lhF'
 alias pi='ssh pi@192.168.0.208'
@@ -13,11 +18,15 @@ alias piw='ssh pi@192.168.0.209'
 alias lu='ssh utylee@192.168.0.201'
 alias od='TERM=xterm-256color-italic ssh odroid@192.168.0.207'
 #alias win='ssh 192.168.0.104'
-alias win='ssh 10.211.55.3'
+
+#두번째 윈도우7 운영체제용으로 아이피를 변경합니다
+#alias win='ssh 10.211.55.3'
+alias win='ssh 10.211.55.10'
 alias openelec='ssh root@192.168.0.39'
 alias scn='screen -h 3000'
 
 # vim server-client 를 위해 env 별 사용할 단축 명령어를 만들어 놓습니다.
+alias vi3='vim --servername WIN --remote '
 alias vi2='vim --servername VIM --remote '
 alias vi1='vim --servername MISC --remote '
 #alias vir='vim --servername VIM --remote '

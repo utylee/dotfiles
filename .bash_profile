@@ -15,6 +15,18 @@ parse_git_branch() {
 }
 #set_virtualenv
 
+# pyenv의 autocompletion 을 사용하라면 추가하라고 합니다
+# 또한 pyenv를 사용하기 위한 PATH설정도 추가합니다
+if which pyenv > /dev/null; then eval "$(pyenv init -)"; fi
+export PYENV_ROOT=~/.pyenv
+export PATH=$PYENV_ROOT/shims:$PATH
+
+# pyenv-virtualenv 를 사용하기 위한 초기화구문
+eval "$(pyenv init -)"
+eval "$(pyenv virtualenv-init -)"
+
+source /usr/local/opt/autoenv/activate.sh
+
 #export VIRTUAL_ENV_DISABLE_PROMPT=1
 #export PS1="\u # \w\$(parse_git_branch) \\$ "
 #export PS1="\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[01;31m\]\$(parse_git_branch)\[\033[00m\]\$ "

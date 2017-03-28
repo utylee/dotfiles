@@ -19,7 +19,9 @@ let &t_EI = "\<Esc>Ptmux;\<Esc>\<Esc>]50;CursorShape=0\x7\<Esc>\\"
 let &t_8f="\e[38;2;%ld;%ld;%ldm"
 let &t_8b="\e[48;2;%ld;%ld;%ldm"
 
-set guicolors
+" vim 8.0에서 truecolor를 정식 지원하기 시작했고, 정식 설정명령이 생겼습니다
+"set guicolors
+set termguicolors
 "set t_Co=256
 "set t_Co=16
 "let g:solarized_termcolors=256
@@ -141,6 +143,7 @@ set shiftwidth=4
 set softtabstop=4
 set nobackup
 set noswapfile
+set expandtab
 "no equalalways or equalalways --> split 화면에서 사이즈 유즈 관련 세팅
 set noea 
 
@@ -236,6 +239,7 @@ let g:airline_theme='molokai'
 "let g:airline_theme='solarized'
 "let g:airline_theme='dark'
 "let g:airline_theme='tomorrow'
+"let g:AirlineTheme='tomorrow'
 "let g:airline_theme='jellybeans'
 
 
@@ -243,7 +247,7 @@ let g:jedi#completions_command = "<C-N>"
 
 "autocmd BufNewFile,BufRead *.qml so c:\vim\vim74\ftplugin\qml.vim
 autocmd BufNewFile,BufRead *.qml setf qml 
-
+au BufNewFile *.py 0r ~/.vim/template/qtbase.skel | let IndentStyle = "py"
 
 set langmenu=utf8
 lang mes en_US 
@@ -263,6 +267,7 @@ set fileencodings=utf-8,cp949
 "set guifont=Ubuntu\ Mono:h15:cANSI
 "set guifont=Ubuntu\ Mono\ derivative\ Powerline:h18.3
 "set guifontwide=NanumGothicCoding:h23
+
 set guifont=Ubuntu\ Mono\ derivative\ Powerline:h19
 "set font=Ubuntu\ Mono\ derivative\ Powerline:h19
 set guifontwide=NanumGothicCoding:h24
