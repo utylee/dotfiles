@@ -13,10 +13,17 @@ source ~/.bash/functions
 export TERM=screen-256color-italic
 
 alias ll='ls -lhF'
-alias pi='ssh pi@192.168.0.208'
-alias piw='ssh pi@192.168.0.209'
+#alias pi='ssh pi@192.168.0.208'
+#alias piw='ssh pi@192.168.0.209'
 alias lu='ssh utylee@192.168.0.201'
-alias od='TERM=xterm-256color-italic ssh odroid@192.168.0.207'
+alias od='TERM=xterm-256color-italic ssh -p 8022 odroid@192.168.0.207'
+#alias pi='TERM=xterm-256color-italic ssh -p 8023 pi@192.168.0.208'
+alias pi='TERM=xterm-256color-italic ssh -p 8023 pi@utylee.dlinkddns.com'
+#alias pi2='TERM=xterm-256color-italic ssh -p 8024 pi@192.168.0.209'
+alias pi2='TERM=xterm-256color-italic ssh -p 8024 pi@utylee.dlinkddns.com'
+#alias pi2='ssh -p 8024 pi@utylee.dlinkddns.com'
+#alias pi3='TERM=xterm-256color-italic ssh -p 8025 pi@192.168.0.209'
+alias pi3='TERM=xterm-256color-italic ssh -p 8025 pi@utylee.dlinkddns.com'
 #alias win='ssh 192.168.0.104'
 
 #두번째 윈도우7 운영체제용으로 아이피를 변경합니다
@@ -56,4 +63,7 @@ alias t1='~/.tmuxset-misc'
 alias t2='~/.tmuxset-trader'
 alias t3='~/.tmuxset-win'
 
+alias t3.4='~/.tmuxset-3.4'
+alias t3.5='~/.tmuxset-3.5'
+alias t3.6='~/.tmuxset-3.6'
 
