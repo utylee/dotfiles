@@ -10,13 +10,13 @@ source ~/.bash/functions
 
 #vim 8.0 업데이트 이후 tic ...terminfo 실행했는데도 불구하고 tmux 상에서 적용이 잘안되어서 변경해봅니다
 #export TERM=xterm-256color-italic
-export TERM=screen-256color-italic
+export TERM=xterm-256color-italic
 
 alias ll='ls -lhF'
 #alias pi='ssh pi@192.168.0.208'
 #alias piw='ssh pi@192.168.0.209'
 alias lu='ssh utylee@192.168.0.201'
-alias od='TERM=xterm-256color-italic ssh -p 8022 odroid@192.168.0.207'
+alias od='TERM=xterm-256color-italic ssh -p 8022 odroid@utylee.dlinkddns.com'
 #alias pi='TERM=xterm-256color-italic ssh -p 8023 pi@192.168.0.208'
 alias pi='TERM=xterm-256color-italic ssh -p 8023 pi@utylee.dlinkddns.com'
 #alias pi2='TERM=xterm-256color-italic ssh -p 8024 pi@192.168.0.209'
@@ -36,6 +36,7 @@ alias scn='screen -h 3000'
 alias vi3='vim --servername WIN --remote '
 alias vi2='vim --servername VIM --remote '
 alias vi1='vim --servername MISC --remote '
+alias vi36='vim --servername v36 --remote '
 #alias vir='vim --servername VIM --remote '
 #alias vis='vim --servername VIM '
 #alias vir='vis --remote '
