@@ -144,6 +144,27 @@
                                 "type": "basic"
                             }
                         ]
+                    },
+                    {
+                        "description": "left command + 0 - Activates iTunes",
+                        "manipulators": [
+                            {
+                                "from": {
+                                    "key_code": "0",
+                                    "modifiers": {
+                                        "mandatory": [
+                                            "left_command"
+                                        ]
+                                    }
+                                },
+                                "to": [
+                                    {
+                                        "shell_command": "open \"/Applications/iTunes.app\""
+                                    }
+                                ],
+                                "type": "basic"
+                            }
+                        ]
                     }
                 ]
             },
