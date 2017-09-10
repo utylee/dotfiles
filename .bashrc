@@ -9,7 +9,7 @@
 #source ~/.bash/functions
 
 #vim 8.0 업데이트 이후 tic ...terminfo 실행했는데도 불구하고 tmux 상에서 적용이 잘안되어서 변경해봅니다
-#export TERM=xterm-256color-italic
+export TERM=xterm-256color-italic
 
 # timemachine 백업속도 올려주는 쓰로틀 오프 명령어를 기록해놓는다
 alias tm='sudo sysctl debug.lowpri_throttle_enabled=0'
@@ -72,6 +72,7 @@ alias t3.4='~/.tmuxset-3.4'
 alias t3.5='~/.tmuxset-3.5'
 alias t3.6='~/.tmuxset-3.6'
 
+export PYENV_VIRTUALENVWRAPPER_PREFER_PYVENV="true"
 export PYENV_ROOT="$HOME/.pyenv"
 export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init -)"

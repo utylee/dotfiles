@@ -6,7 +6,8 @@ set nocompatible
 set backspace=indent,eol,start
 
 " bashrc 의 alias를 읽기 위한 설정입니다
-let $BASH_ENV = "~/.bashrc"
+"let $BASH_ENV = "~/.bashrc"
+let $BASH_ENV = "~/.bash_functions"
 
 "osx 터미널 상에서의 인서트모드 커서를 변경합니다.
 let &t_SI = "\<Esc>]50;CursorShape=1\x7"
@@ -268,9 +269,13 @@ set fileencodings=utf-8,cp949
 "set guifont=Ubuntu\ Mono\ derivative\ Powerline:h18.3
 "set guifontwide=NanumGothicCoding:h23
 
-set guifont=Ubuntu\ Mono\ derivative\ Powerline:h19
+"set guifont=Ubuntu\ Mono\ derivative\ Powerline:h19
+"set guifont=Menlo\ for\ Powerline:h19
+"set guifont=Menlo\ for\ Powerline
+"macOS 상에서 iTerm에서는 폰트설정을 따로해주므로 의미가 없는 것 같습니다
+set guifont=Input
 "set font=Ubuntu\ Mono\ derivative\ Powerline:h19
-set guifontwide=NanumGothicCoding:h24
+"set guifontwide=NanumGothicCoding:h24
 "set guifontwide=NanumGothicCoding:h15:cDEFAULT
 "set guifontwide=Ubuntu:h15:cDEFAULT
 
