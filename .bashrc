@@ -1,29 +1,32 @@
-export WORKON_HOME=~/.virtualenvs
-#vim 에서 ctrlp \f 파일찾기 명령 오류로 찾아보니 homebrew doctor 명령에서도 지적했듯이 venvwrapper환경에서 
-# python을 python3 로 가리키는 것이 문제라고 힌트를 줬는데 ctrlp 도 같은 문제인듯 싶다
+#export WORKON_HOME=~/.virtualenvs
+##vim 에서 ctrlp \f 파일찾기 명령 오류로 찾아보니 homebrew doctor 명령에서도 지적했듯이 venvwrapper환경에서 
+## python을 python3 로 가리키는 것이 문제라고 힌트를 줬는데 ctrlp 도 같은 문제인듯 싶다
+##export VIRTUALENVWRAPPER_PYTHON=/usr/local/bin/python3
 #export VIRTUALENVWRAPPER_PYTHON=/usr/local/bin/python3
-export VIRTUALENVWRAPPER_PYTHON=/usr/local/bin/python
-#export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python
-source /usr/local/bin/virtualenvwrapper.sh
-#source /usr/local/bin/pyenv-virtualenvwrapper
-source ~/.bash/functions
+##export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python
+#source /usr/local/bin/virtualenvwrapper.sh
+##source /usr/local/bin/pyenv-virtualenvwrapper
+#source ~/.bash/functions
 
 #vim 8.0 업데이트 이후 tic ...terminfo 실행했는데도 불구하고 tmux 상에서 적용이 잘안되어서 변경해봅니다
 #export TERM=xterm-256color-italic
-export TERM=xterm-256color-italic
+
+# timemachine 백업속도 올려주는 쓰로틀 오프 명령어를 기록해놓는다
+alias tm='sudo sysctl debug.lowpri_throttle_enabled=0'
 
 alias ll='ls -lhF'
+alias vi='vim'
 #alias pi='ssh pi@192.168.0.208'
 #alias piw='ssh pi@192.168.0.209'
 alias lu='ssh utylee@192.168.0.201'
-alias od='TERM=xterm-256color-italic ssh -p 8022 odroid@utylee.dlinkddns.com'
+alias od='tmux rename-window "od";TERM=xterm-256color-italic ssh -p 8022 odroid@utylee.dlinkddns.com'
 #alias pi='TERM=xterm-256color-italic ssh -p 8023 pi@192.168.0.208'
-alias pi='TERM=xterm-256color-italic ssh -p 8023 pi@utylee.dlinkddns.com'
+alias pi='tmux rename-window "pi";TERM=xterm-256color-italic ssh -p 8023 pi@utylee.dlinkddns.com'
 #alias pi2='TERM=xterm-256color-italic ssh -p 8024 pi@192.168.0.209'
-alias pi2='TERM=xterm-256color-italic ssh -p 8024 pi@utylee.dlinkddns.com'
+alias pi2='tmux rename-window "pi2";TERM=xterm-256color-italic ssh -p 8024 pi@utylee.dlinkddns.com'
 #alias pi2='ssh -p 8024 pi@utylee.dlinkddns.com'
 #alias pi3='TERM=xterm-256color-italic ssh -p 8025 pi@192.168.0.209'
-alias pi3='TERM=xterm-256color-italic ssh -p 8025 pi@utylee.dlinkddns.com'
+alias pi3='tmux rename-window "pi3";TERM=xterm-256color-italic ssh -p 8025 pi@utylee.dlinkddns.com'
 #alias win='ssh 192.168.0.104'
 
 #두번째 윈도우7 운영체제용으로 아이피를 변경합니다
@@ -60,6 +63,7 @@ parse_git_branch() {
 }
 
 #tmux workspace shortcut
+alias t0='~/.tmuxset-blog'
 alias t1='~/.tmuxset-misc'
 alias t2='~/.tmuxset-trader'
 alias t3='~/.tmuxset-win'
@@ -68,3 +72,7 @@ alias t3.4='~/.tmuxset-3.4'
 alias t3.5='~/.tmuxset-3.5'
 alias t3.6='~/.tmuxset-3.6'
 
+export PYENV_ROOT="$HOME/.pyenv"
+export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init -)"
+pyenv virtualenvwrapper_lazy
