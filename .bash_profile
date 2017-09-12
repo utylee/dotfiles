@@ -17,13 +17,15 @@ parse_git_branch() {
 
 # pyenv의 autocompletion 을 사용하라면 추가하라고 합니다
 # 또한 pyenv를 사용하기 위한 PATH설정도 추가합니다
-if which pyenv > /dev/null; then eval "$(pyenv init -)"; fi
-export PYENV_ROOT=~/.pyenv
-export PATH=$PYENV_ROOT/shims:$PATH
+#if which pyenv > /dev/null; then eval "$(pyenv init -)"; fi
+#export PYENV_ROOT=~/.pyenv
+#export PATH=$PYENV_ROOT/shims:$PATH
 
 # pyenv-virtualenv 를 사용하기 위한 초기화구문
-eval "$(pyenv init -)"
-eval "$(pyenv virtualenv-init -)"
+#eval "$(pyenv init -)"
+#eval "$(pyenv virtualenv-init -)"
+
+#source "$(brew --prefix)/etc/bash_completion"
 
 source /usr/local/opt/autoenv/activate.sh
 

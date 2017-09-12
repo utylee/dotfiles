@@ -203,11 +203,11 @@ let g:ctrlp_custom_ignore = {
 " Use the nearest .git directory as the cwd
 " This makes a lot of sense if you are working on a project that is in version
 " control. It also supports works with .svn, .hg, .bzr.
-"let g:ctrlp_working_path_mode = 'r'
+let g:ctrlp_working_path_mode = 'r'
 
 " Use a leader instead of the actual named binding
 " 자꾸 팅겨서 명령어 자체를 임시로 제거합니다
-"nmap <leader>f :CtrlP<cr>  
+nmap <leader>f :CtrlP<cr>  
 
 " Easy bindings for its various modes
 nmap <leader>b :CtrlPBuffer<cr>
@@ -236,7 +236,9 @@ colorscheme solarized_sd_utylee
 "let g:molokai_original = 1
 
 "set air-line theme {dark, molokai, ...}
-let g:airline_theme='molokai'
+"let g:airline_theme='molokai'
+"let g:airline_theme='base16_atelierlakeside'
+let g:airline_theme='raven'
 "let g:airline_theme='solarized'
 "let g:airline_theme='dark'
 "let g:airline_theme='tomorrow'
