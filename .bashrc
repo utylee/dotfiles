@@ -30,6 +30,7 @@ alias pi2='tmux rename-window "pi2";TERM=xterm-256color-italic ssh -p 8024 pi@ut
 #alias pi3='TERM=xterm-256color-italic ssh -p 8025 pi@192.168.0.209'
 alias pi3='tmux rename-window "pi3";TERM=xterm-256color-italic ssh -p 8025 pi@utylee.dlinkddns.com'
 #alias win='ssh 192.168.0.104'
+alias wsl='tmux rename-window "wsl";TERM=xterm-256color-italic ssh -p 2222 utylee@utylee.dlinkddns.com'
 
 #두번째 윈도우7 운영체제용으로 아이피를 변경합니다
 #alias win='ssh 10.211.55.3'
