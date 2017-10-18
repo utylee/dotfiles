@@ -77,6 +77,8 @@ alias t3.4='~/.tmuxset-3.4'
 alias t3.5='~/.tmuxset-3.5'
 alias t3.6='~/.tmuxset-3.6'
 
+alias mygrep="grep -rn . --exclude={*.o,*.a,tags} -e "
+
 #export PYENV_VIRTUALENVWRAPPER_PREFER_PYVENV="true"
 export PYENV_ROOT="$HOME/.pyenv"
 export PATH="$PYENV_ROOT/bin:$PATH"

@@ -1,4 +1,6 @@
 source ~/.bashrc
+# openvpn 설치해도 실행파일 링크가 안돼서 해결책
+export PATH=$(brew --prefix openvpn)/sbin:$PATH
 # The various escape codes that we can use to color our prompt.
         RED="\[\033[0;31m\]"
      YELLOW="\[\033[1;33m\]"
@@ -28,6 +30,10 @@ parse_git_branch() {
 #source "$(brew --prefix)/etc/bash_completion"
 
 source /usr/local/opt/autoenv/activate.sh
+
+export TRINITY=/Users/utylee/Trinity
+export PATH=$TRINITY/bin:/usr/local/mysql/bin:$PATH
+export DYLD_LIBRARY_PATH=$TRINITY/lib:/usr/local/mysql/lib:$DYLD_LIBRARY_PATH
 
 #export VIRTUAL_ENV_DISABLE_PROMPT=1
 #export PS1="\u # \w\$(parse_git_branch) \\$ "

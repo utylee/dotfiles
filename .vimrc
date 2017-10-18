@@ -3,11 +3,23 @@ set nocompatible
 "source $VIMRUNTIME/mswin.vim
 "behave mswin
 
+"nnoremap ,c :let @* = expand("%:p").":".line('.')<cr>
+nnoremap ,c :let @* = expand("%:p")<cr>
+
+set clipboard=unnamed
 set backspace=indent,eol,start
+nnoremap <F4> :e %:p:s,.h$,.X123X,:s,.cpp$,.h,:s,.X123X$,.cpp,<CR>
+" 현재파일의 디렉토리로 변경 %->  상대경로파일명, :p-> 절대경로파일명, :h->
+" 한마디전으로
+nmap <leader>c :cd %:p:h<cr> :pwd<cr>
+
+
 
 " bashrc 의 alias를 읽기 위한 설정입니다
 "let $BASH_ENV = "~/.bashrc"
 let $BASH_ENV = "~/.bash_functions"
+
+set tags+=~/temp/Trinity/repo/src/tags
 
 "osx 터미널 상에서의 인서트모드 커서를 변경합니다.
 let &t_SI = "\<Esc>]50;CursorShape=1\x7"
@@ -163,6 +175,7 @@ if has("gui_running")
 	set fullscreen
 endif
 
+
 set noshellslash
 "map <F5> : !python3 %<CR>
 "nmap <leader>e :!python3 %<CR>
@@ -182,8 +195,8 @@ map <F1> :e $MYVIMRC<CR>
 nmap <leader>1 :e $MYVIMRC<CR>
 map <A-3> :tabnext<CR>
 map <A-4> :tabprevious<CR>
-map <F3> :cn<CR>
-map <F4> :cp<CR>
+"map <F3> :cn<CR>
+"map <F4> :cp<CR>
 "ex) :ccl<CR>       "Close the search result windows
 
 "map <c-j> <c-w>j
@@ -207,7 +220,8 @@ let g:ctrlp_working_path_mode = 'r'
 
 " Use a leader instead of the actual named binding
 " 자꾸 팅겨서 명령어 자체를 임시로 제거합니다
-nmap <leader>f :CtrlP<cr>  
+"nmap <leader>f :CtrlP<cr>  
+nmap <leader>f :CtrlPCurFile<cr>  
 
 " Easy bindings for its various modes
 nmap <leader>b :CtrlPBuffer<cr>
@@ -247,6 +261,7 @@ let g:airline_theme='raven'
 
 
 let g:jedi#completions_command = "<C-N>"
+"let g:ConqueGdb_Leader = ','
 
 "autocmd BufNewFile,BufRead *.qml so c:\vim\vim74\ftplugin\qml.vim
 autocmd BufNewFile,BufRead *.qml setf qml 
