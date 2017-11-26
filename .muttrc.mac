@@ -1,0 +1,14 @@
+set imap_user = "utylee@gmail.com"
+set imap_pass = "sksmsqnwk11YOUR-PASSWORD"
+set smtp_url = "smtp://utylee@smtp.gmail.com:587/”
+set smtp_pass = "sksmsqnwk11"
+set from = "utylee@gmail.com"
+set realname = "Tae yoon Lee"
+set folder = "imaps://imap.gmail.com:993"
+set spoolfile = "+INBOX"
+set postponed = "+[Gmail]/Drafts"
+set header_cache = ~/.mutt/cache/headers
+set message_cachedir = ~/.mutt/cache/bodies
+set certificate_file = ~/.mutt/certificates
+set move = no
+set smtp_authenticators = ‘gssapi:login’
