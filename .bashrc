@@ -88,9 +88,13 @@ t0() {
     open /Applications/Utilities/Xquartz.app
     sh ~/.tmuxset-blog 
 }
+t1() {
+    open /Applications/Utilities/Xquartz.app
+    sh ~/.tmuxset-misc 
+}
 #tmux workspace shortcut
 #alias t0='~/.tmuxset-blog'
-alias t1='~/.tmuxset-misc'
+#alias t1='~/.tmuxset-misc'
 alias t2='~/.tmuxset-trader'
 alias t3='~/.tmuxset-win'
 alias tf='~/.tmuxset-fontforge'
