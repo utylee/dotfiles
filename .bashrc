@@ -23,8 +23,10 @@ alias vi='vim'
 alias lu='ssh utylee@192.168.0.201'
 alias od='tmux rename-window "od";TERM=xterm-256color-italic ssh -p 8022 odroid@utylee.dlinkddns.com'
 #alias pi='TERM=xterm-256color-italic ssh -p 8023 pi@192.168.0.208'
-alias pi='tmux rename-window "pi";TERM=xterm-256color-italic ssh -p 8023 pi@utylee.dlinkddns.com'
+#alias pi='tmux rename-window "pi";TERM=xterm-256color-italic ssh -p 8023 pi@utylee.dlinkddns.com'
+alias pi='tmux rename-window "pi";TERM=xterm-256color-italic ssh -p 8028 pi@utylee.dlinkddns.com'
 #alias pi2='TERM=xterm-256color-italic ssh -p 8024 pi@192.168.0.209'
+alias octo='tmux rename-window "octo";ssh -p 8027 pi@octopi.local'
 alias pi2='tmux rename-window "pi2";TERM=xterm-256color-italic ssh -p 8024 pi@utylee.dlinkddns.com'
 #alias pi2='ssh -p 8024 pi@utylee.dlinkddns.com'
 #alias pi3='TERM=xterm-256color-italic ssh -p 8025 pi@192.168.0.209'
@@ -42,6 +44,7 @@ alias scn='screen -h 3000'
 alias vi3='vim --servername WIN --remote '
 alias vi2='vim --servername VIM --remote '
 alias vi1='vim --servername MISC --remote '
+alias vi0='vim --servername BLOG --remote '
 alias vi36='vim --servername v36 --remote '
 alias vif='vim --servername FF --remote '
 #alias vir='vim --servername VIM --remote '
@@ -66,8 +69,27 @@ parse_git_branch() {
    git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/(\1)/'
 }
 
+m() {
+    #echo $2 | mutt -s "$1" utylee@gmail.com -a "$3"
+    echo $2 | mutt -s "$1" utylee@gmail.com
+}
+
+ma() {
+    #echo $2 | mutt -s "$1" utylee@gmail.com -a "$3"
+    echo $2 | mutt -s "$1" utylee@gmail.com -a "$3"
+}
+# simplify3d execute crack`
+s() {
+    #echo $2 | mutt -s "$1" utylee@gmail.com -a "$3"
+    echo sksmsqnwk11 | sudo -S DYLD_INSERT_LIBRARIES=/Applications/Simplify3D-4.0.1/Interface.dylib DYLD_FORCE_FLAT_NAMESPACE=1 /Applications/Simplify3D-4.0.1/Simplify3D.app/Contents/MacOS/Simplify3D
+}
+
+t0() {
+    open /Applications/Utilities/Xquartz.app
+    sh ~/.tmuxset-blog 
+}
 #tmux workspace shortcut
-alias t0='~/.tmuxset-blog'
+#alias t0='~/.tmuxset-blog'
 alias t1='~/.tmuxset-misc'
 alias t2='~/.tmuxset-trader'
 alias t3='~/.tmuxset-win'
@@ -84,3 +106,8 @@ export PYENV_ROOT="$HOME/.pyenv"
 export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init -)"
 pyenv virtualenvwrapper_lazy
+
+export NACL_SDK_ROOT=/Users/utylee/temp/nacl_sdk/pepper_49
+
+export PATH="/Applications/Arduino.app/Contents/MacOS:$PATH"
+export PATH="/usr/local/opt/python@2/libexec/bin:$PATH"
