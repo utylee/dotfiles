@@ -2,16 +2,19 @@ set nocompatible
 "source $VIMRUNTIME/vimrc_example.vim
 "source $VIMRUNTIME/mswin.vim
 "behave mswin
+"
+set timeoutlen=1000 ttimeoutlen=0
+
+set hidden
 
 "nnoremap ,c :let @* = expand("%:p").":".line('.')<cr>
-nnoremap ,c :let @* = expand("%:p")<cr>
+"nnoremap ,c :let @* = expand("%:p")<cr>
 
-set clipboard=unnamed
+"set clipboard=unnamed
 set backspace=indent,eol,start
 nnoremap <F4> :e %:p:s,.h$,.X123X,:s,.cpp$,.h,:s,.X123X$,.cpp,<CR>
 " 현재파일의 디렉토리로 변경 %->  상대경로파일명, :p-> 절대경로파일명, :h->
 " 한마디전으로
-nmap <leader>c :cd %:p:h<cr> :pwd<cr>
 
 
 
@@ -177,12 +180,20 @@ endif
 
 
 set noshellslash
+
+"For Arduino IDE commandlinetool
+nmap <leader>u :ArduinoUpload<CR>
+nmap <leader>v :ArduinoVerify<CR>
+nmap <leader>3 :ArduinoSerial<CR>
+
 "map <F5> : !python3 %<CR>
 "nmap <leader>e :!python3 %<CR>
 "nmap <leader>e :!python3 '%:p'<CR>
 "nmap <leader>e :set shellcmdflag=-ic <CR> :!ts python '%'<CR> <CR> :set shellcmdflag=-c<CR>
 "nmap <leader>e :!ts python '%:p' 2>/dev/null<CR> <CR>
 nmap <leader>e :!ts python '%' 2>/dev/null<CR> <CR>
+nmap <leader>c :!ts C-c<CR> <CR>
+nmap <leader>z :cd %:p:h<cr> :pwd<cr>
 "현재 행을 실행하는 커맨드인데 공백제거가 안돼 아직 제대로 되지 않습니다
 nmap <leader>w :exec '!ts python -c \"'getline('.')'\"'<CR>
 nmap <leader>` :set fullscreen<CR>
@@ -221,7 +232,7 @@ let g:ctrlp_working_path_mode = 'r'
 " Use a leader instead of the actual named binding
 " 자꾸 팅겨서 명령어 자체를 임시로 제거합니다
 "nmap <leader>f :CtrlP<cr>  
-nmap <leader>f :CtrlPCurFile<cr>  
+nmap <leader>f :CtrlPCurWD<cr>
 
 " Easy bindings for its various modes
 nmap <leader>b :CtrlPBuffer<cr>
@@ -261,7 +272,7 @@ let g:airline_theme='raven'
 
 
 let g:jedi#completions_command = "<C-N>"
-"let g:ConqueGdb_Leader = ','
+let g:ConqueGdb_Leader = ','
 
 "autocmd BufNewFile,BufRead *.qml so c:\vim\vim74\ftplugin\qml.vim
 autocmd BufNewFile,BufRead *.qml setf qml 
@@ -302,3 +313,8 @@ set guifont=Input
 "
 "
 
+
+"let g:arduino_serial_cmd = 'screen /dev/cu.wchusbserial14130 115200'
+
+"let g:arduino_cmd = '/Applications/Arduino.app/Contents/MacOS/Arduino'
+"let g:arduino_dir = '/Applications/Arduino.app/Contents/MacOS'
