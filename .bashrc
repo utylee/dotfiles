@@ -18,21 +18,28 @@ alias tm='sudo sysctl debug.lowpri_throttle_enabled=0'
 alias t='python ~/.virtualenvs/misc/src/translate_cmd.py '
 alias ll='ls -lhF'
 alias vi='vim'
-#alias pi='ssh pi@192.168.0.208'
-#alias piw='ssh pi@192.168.0.209'
 alias lu='ssh utylee@192.168.0.201'
-alias od='tmux rename-window "od";TERM=xterm-256color-italic ssh -p 8022 odroid@utylee.dlinkddns.com'
+alias od='tmux rename-window "od";TERM=xterm-256color-italic ssh -X -p 8022 odroid@192.168.0.207'
+alias odod='tmux rename-window "od";TERM=xterm-256color-italic ssh -p 8022 odroid@utylee.dlinkddns.com'
+alias hc='tmux rename-window "hc";TERM=xterm-256color-italic ssh -p 8026 odroid@192.168.0.212'
+alias hchc='tmux rename-window "hc";TERM=xterm-256color-italic ssh -X -p 8026 odroid@utylee.dlinkddns.com'
+#alias hc='tmux rename-window "";TERM=xterm-256color-italic ssh -X -p 8026 odroid@utylee.dlinkddns.com'
 #alias pi='TERM=xterm-256color-italic ssh -p 8023 pi@192.168.0.208'
 #alias pi='tmux rename-window "pi";TERM=xterm-256color-italic ssh -p 8023 pi@utylee.dlinkddns.com'
-alias pi='tmux rename-window "pi";TERM=xterm-256color-italic ssh -p 8028 pi@utylee.dlinkddns.com'
+#alias pi='tmux rename-window "pi";TERM=xterm-256color-italic ssh -p 8028 pi@utylee.dlinkddns.com'
+alias pi='tmux rename-window "pi";TERM=xterm-256color-italic ssh -p 8028 pi@192.168.0.211'
+alias pipi='tmux rename-window "pi";TERM=xterm-256color-italic ssh -p 8028 pi@utylee.dlinkddns.com'
 #alias pi2='TERM=xterm-256color-italic ssh -p 8024 pi@192.168.0.209'
 alias octo='tmux rename-window "octo";ssh -p 8027 pi@octopi.local'
-alias pi2='tmux rename-window "pi2";TERM=xterm-256color-italic ssh -p 8024 pi@utylee.dlinkddns.com'
+alias pi2='tmux rename-window "pi2";TERM=xterm-256color-italic ssh -p 8024 pi@192.168.0.209'
+alias pi2pi2='tmux rename-window "pi2";TERM=xterm-256color-italic ssh -p 8024 pi@utylee.dlinkddns.com'
 #alias pi2='ssh -p 8024 pi@utylee.dlinkddns.com'
 #alias pi3='TERM=xterm-256color-italic ssh -p 8025 pi@192.168.0.209'
-alias pi3='tmux rename-window "pi3";TERM=xterm-256color-italic ssh -p 8025 pi@utylee.dlinkddns.com'
+alias pi3='tmux rename-window "pi3";TERM=xterm-256color-italic ssh -p 8025 pi@192.168.0.210'
+alias pi3pi3='tmux rename-window "pi3";TERM=xterm-256color-italic ssh -p 8025 pi@utylee.dlinkddns.com'
 #alias win='ssh 192.168.0.104'
-alias wsl='tmux rename-window "wsl";TERM=xterm-256color-italic ssh -p 2222 utylee@utylee.dlinkddns.com'
+alias wsl='tmux rename-window "wsl";TERM=xterm-256color-italic ssh -p 2222 utylee@192.168.0.102'
+alias wslwsl='tmux rename-window "wsl";TERM=xterm-256color-italic ssh -p 2222 utylee@utylee.dlinkddns.com'
 
 #두번째 윈도우7 운영체제용으로 아이피를 변경합니다
 #alias win='ssh 10.211.55.3'
@@ -105,13 +112,21 @@ alias t3.6='~/.tmuxset-3.6'
 
 alias mygrep="grep -rn . --exclude={*.o,*.a,tags} -e "
 
+
+#if [ -f $(brew --prefix)/etc/bash_completion ]; then
+    #. $(brew --prefix)/etc/bash_completion
+#fi
+
+#export NACL_SDK_ROOT=/Users/utylee/temp/nacl_sdk/pepper_49
+
+export PATH="/Applications/Arduino.app/Contents/MacOS:$PATH"
+#export PATH="/usr/local/opt/python@2/libexec/bin:$PATH"
+export PATH="/usr/local/sbin:$PATH"
+
 #export PYENV_VIRTUALENVWRAPPER_PREFER_PYVENV="true"
 export PYENV_ROOT="$HOME/.pyenv"
 export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init -)"
 pyenv virtualenvwrapper_lazy
 
-export NACL_SDK_ROOT=/Users/utylee/temp/nacl_sdk/pepper_49
-
-export PATH="/Applications/Arduino.app/Contents/MacOS:$PATH"
-export PATH="/usr/local/opt/python@2/libexec/bin:$PATH"
+[ -f ~/.fzf.bash ] && source ~/.fzf.bash
