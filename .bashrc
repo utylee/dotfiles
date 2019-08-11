@@ -8,6 +8,8 @@
 ##source /usr/local/bin/pyenv-virtualenvwrapper
 #source ~/.bash/functions
 
+
+
 #vim 8.0 업데이트 이후 tic ...terminfo 실행했는데도 불구하고 tmux 상에서 적용이 잘안되어서 변경해봅니다
 export TERM=xterm-256color-italic
 export DISPLAY=:0
@@ -38,7 +40,7 @@ alias pi2pi2='tmux rename-window "pi2";TERM=xterm-256color-italic ssh -p 8024 pi
 alias pi3='tmux rename-window "pi3";TERM=xterm-256color-italic ssh -p 8025 pi@192.168.0.210'
 alias pi3pi3='tmux rename-window "pi3";TERM=xterm-256color-italic ssh -p 8025 pi@utylee.dlinkddns.com'
 #alias win='ssh 192.168.0.104'
-alias wsl='tmux rename-window "wsl";TERM=xterm-256color-italic ssh -p 2222 utylee@192.168.0.102'
+alias wsl='tmux rename-window "wsl";TERM=xterm-256color-italic ssh  -p 2222 utylee@192.168.0.102'
 alias wslwsl='tmux rename-window "wsl";TERM=xterm-256color-italic ssh -p 2222 utylee@utylee.dlinkddns.com'
 
 #두번째 윈도우7 운영체제용으로 아이피를 변경합니다
@@ -46,6 +48,7 @@ alias wslwsl='tmux rename-window "wsl";TERM=xterm-256color-italic ssh -p 2222 ut
 alias win='ssh 10.211.55.10'
 alias openelec='ssh root@192.168.0.39'
 alias scn='screen -h 3000'
+alias dt='tmux detach -a'
 
 # vim server-client 를 위해 env 별 사용할 단축 명령어를 만들어 놓습니다.
 alias vi3='vim --servername WIN --remote '
@@ -95,13 +98,14 @@ t0() {
     open /Applications/Utilities/Xquartz.app
     sh ~/.tmuxset-blog 
 }
-t1() {
-    open /Applications/Utilities/Xquartz.app
-    sh ~/.tmuxset-misc 
-}
+
+#t1() {
+    #open /Applications/Utilities/Xquartz.app
+    #sh ~/.tmuxset-misc 
+#}
 #tmux workspace shortcut
 #alias t0='~/.tmuxset-blog'
-#alias t1='~/.tmuxset-misc'
+alias t1='~/.tmuxset-misc'
 alias t2='~/.tmuxset-trader'
 alias t3='~/.tmuxset-win'
 alias tf='~/.tmuxset-fontforge'
@@ -123,6 +127,16 @@ export PATH="/Applications/Arduino.app/Contents/MacOS:$PATH"
 #export PATH="/usr/local/opt/python@2/libexec/bin:$PATH"
 export PATH="/usr/local/sbin:$PATH"
 
+# pyenv를 macOS에 설치 중 3.6.8 버전 설치중 zlib 못찾는 문제 해결법
+
+# For compilers to find zlib you may need to set:
+export LDFLAGS="${LDFLAGS} -L/usr/local/opt/zlib/lib"
+export CPPFLAGS="${CPPFLAGS} -I/usr/local/opt/zlib/include"
+
+# For pkg-config to find zlib you may need to set:
+export PKG_CONFIG_PATH="${PKG_CONFIG_PATH} /usr/local/opt/zlib/lib/pkgconfig"
+
+
 #export PYENV_VIRTUALENVWRAPPER_PREFER_PYVENV="true"
 export PYENV_ROOT="$HOME/.pyenv"
 export PATH="$PYENV_ROOT/bin:$PATH"
@@ -130,3 +144,4 @@ eval "$(pyenv init -)"
 pyenv virtualenvwrapper_lazy
 
 [ -f ~/.fzf.bash ] && source ~/.fzf.bash
+export FZF_DEFAULT_COMMAND='ag --hidden -g ""'
