@@ -17,7 +17,9 @@ export DISPLAY=:0
 # timemachine 백업속도 올려주는 쓰로틀 오프 명령어를 기록해놓는다
 alias tm='sudo sysctl debug.lowpri_throttle_enabled=0'
 
-alias t='python ~/.virtualenvs/misc/src/translate_cmd.py '
+alias t='python ~/.virtualenvs/misc/src/translate_cmd.py ko '
+alias f='python ~/.virtualenvs/misc/src/translate_cmd.py en '
+alias j='python ~/.virtualenvs/misc/src/translate_cmd.py ja '                
 alias ll='ls -lhF'
 alias vi='vim'
 alias lu='ssh utylee@192.168.0.201'
@@ -53,8 +55,8 @@ alias dt='tmux detach -a'
 # vim server-client 를 위해 env 별 사용할 단축 명령어를 만들어 놓습니다.
 alias vi3='vim --servername WIN --remote '
 alias vi2='vim --servername VIM --remote '
-alias vi1='vim --servername MISC --remote '
-alias vi0='vim --servername BLOG --remote '
+#alias vi1='vim --servername MISC --remote '
+#alias vi0='vim --servername BLOG --remote '
 alias vi36='vim --servername v36 --remote '
 alias vif='vim --servername FF --remote '
 #alias vir='vim --servername VIM --remote '
@@ -103,6 +105,27 @@ t0() {
     #open /Applications/Utilities/Xquartz.app
     #sh ~/.tmuxset-misc 
 #}
+
+vi0() {
+    filename=$PWD/$1
+    tmux send-keys -t vBLOG.0 ":e $filename" C-m
+    tmux select-window -t vBLOG
+    tmux select-pane -t vBLOG.0
+}
+vi1() {
+    filename=$PWD/$1
+    tmux send-keys -t vMISC.0 ":e $filename" C-m
+    tmux select-window -t vMISC
+    tmux select-pane -t vMISC.0
+}
+vir() {
+    filename=$PWD/$1
+    tmux send-keys -t vRust.0 ":e $filename" C-m
+    tmux select-window -t vRust
+    tmux select-pane -t vRust.0
+}
+
+
 #tmux workspace shortcut
 #alias t0='~/.tmuxset-blog'
 alias t1='~/.tmuxset-misc'
