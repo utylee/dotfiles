@@ -1,4 +1,5 @@
-source "gpg -d ~/.mutt/passwords.gpg |"
+source "echo sksmsqnwk11 | gpg --batch --yes --passphrase-fd 0 -d ~/.mutt/passwords.gpg |"
+#source "gpg -r utylee@gmail.com -d ~/.mutt/passwords.gpg |"
 set imap_user = "utylee@gmail.com"
 #set imap_pass=`gpg --batch -q --decrypt ~/.passwd/pass.gpg`
 #set imap_pass=`gpg -d ~/.passwd/.pass.gpg | awk '/GMail:/ {print $2}'`
