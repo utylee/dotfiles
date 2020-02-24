@@ -1,5 +1,3 @@
-set imap_user = "utylee@gmail.com"
-set imap_pass = "sksmsqnwk11YOUR-PASSWORD"
 set smtp_url = "smtp://utylee@smtp.gmail.com:587/”
 set smtp_pass = "sksmsqnwk11"
 set from = "utylee@gmail.com"
