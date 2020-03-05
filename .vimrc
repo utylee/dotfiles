@@ -289,6 +289,7 @@ endif
 set noshellslash
 
 nmap <leader>r :Rooter<CR>
+let g:rooter_manual_only = 1
 "For Arduino IDE commandlinetool
 nmap <leader>u :ArduinoUpload<CR>
 nmap <leader>v :ArduinoVerify<CR>
