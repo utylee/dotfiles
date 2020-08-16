@@ -33,7 +33,21 @@ command! -bang -nargs=* Ag call fzf#vim#ag(<q-args>, '--hidden', <bang>0)
 " 첫번째 항목 선택이 이상해서말이죠
 "
 set completeopt=longest,menuone,preview
-inoremap <expr> <CR> pumvisible() ? "\<C-y>" : "\<C-g>u\<CR>"
+
+
+"nnoremap <F5> :call LanguageClient_contextMenu()<CR>
+" Or map each action separately
+" nnoremap <silent> K :call LanguageClient#textDocument_hover()<CR>
+" nnoremap <silent> gd :call LanguageClient#textDocument_definition()<CR>
+" nnoremap <silent> <F2> :call LanguageClient#textDocument_rename()<CR>
+ inoremap <expr> <Tab> pumvisible() ? "\<C-n>" : "\<Tab>"
+ inoremap <expr> <S-Tab> pumvisible() ? "\<C-p>" : "\<S-Tab>"
+ inoremap <expr> <cr> pumvisible() ? "\<C-y>" : "\<cr>"
+"
+" autocmd InsertLeave,CompleteDone * if pumvisible() == 0 | pclose | endif
+"  
+
+"inoremap <expr> <CR> pumvisible() ? "\<C-y>" : "\<C-g>u\<CR>"
 
 "inoremap <expr> <C-n> pumvisible() ? '<C-n>' :
 
