@@ -17,8 +17,8 @@ export GPG_TTY=$(tty)
 # gpg 에서 ioctrl 오류를 해결하기 위함입니다
 
 
-alias bye='sudo ifconfig en0 mtu 500'
-alias hi='sudo ifconfig en0 mtu 1500'
+alias bye='echo sksmsqnwk11 | sudo -S ifconfig en0 mtu 500'
+alias hi='echo sksmsqnwk11 | sudo -S ifconfig en0 mtu 1500'
 # timemachine 백업속도 올려주는 쓰로틀 오프 명령어를 기록해놓는다
 alias tm='sudo sysctl debug.lowpri_throttle_enabled=0'
 
@@ -131,6 +131,13 @@ vir() {
     tmux select-pane -t vRust.0
 }
 
+fx() {
+        /Users/utylee/.virtualenvs/misc/bin/python /Users/utylee/.virtualenvs/misc/src/forex-test.py 0 $1
+    }
+xf() {
+        /Users/utylee/.virtualenvs/misc/bin/python /Users/utylee/.virtualenvs/misc/src/forex-test.py 1 $1
+    }
+
 
 #tmux workspace shortcut
 #alias t0='~/.tmuxset-blog'
@@ -161,9 +168,16 @@ export PATH="/usr/local/sbin:$PATH"
 # For compilers to find zlib you may need to set:
 export LDFLAGS="${LDFLAGS} -L/usr/local/opt/zlib/lib"
 export CPPFLAGS="${CPPFLAGS} -I/usr/local/opt/zlib/include"
+export PATH="/usr/local/opt/openssl@1.1/bin:$PATH"
+
+# For brew installed readline
+export LDFLAGS="${LDFLAGS} -L/usr/local/opt/readline/lib"
+export CPPFLAGS="${CPPFLAGS} -I/usr/local/opt/readline/include"
 
 # For pkg-config to find zlib you may need to set:
 export PKG_CONFIG_PATH="${PKG_CONFIG_PATH} /usr/local/opt/zlib/lib/pkgconfig"
+
+#export LDFLAGS="-L/usr/local/opt/avr-gcc@8/lib"
 
 
 #export PYENV_VIRTUALENVWRAPPER_PREFER_PYVENV="true"
