@@ -2,7 +2,7 @@ set nocompatible
 "source $VIMRUNTIME/vimrc_example.vim
 "source $VIMRUNTIME/mswin.vim
 "behave mswin
-"
+
 set timeoutlen=1000 ttimeoutlen=0
 
 " ctrlp가 ag를 사용하게 합니다
@@ -217,7 +217,7 @@ let g:airline#extensions#tagbar#flags = 'f'
 
 let g:airline#extensions#hunks#enabled = 0
 let g:airline#extensions#whitespace#enabled = 0
-let g:airline_section_c = '%f'
+"let g:airline_section_c = '%f'
 " tagbar 업데이트가 너무 느려서 확인해보니 기본 4000이었습니다
 set updatetime=1000
 au VimEnter * let g:airline_section_x = airline#section#create(['tagbar']) | :AirlineRefresh
@@ -317,6 +317,8 @@ nmap <leader>3 :ArduinoSerial<CR>
 nmap <leader>e :!ts python '%' 2>/dev/null<CR> <CR>
 nmap <leader>c :!ts C-c<CR> <CR>
 nmap <leader>z :cd %:p:h<cr> :pwd<cr>
+nmap <leader>Z :ProsessionDelete<cr>
+
 "현재 행을 실행하는 커맨드인데 공백제거가 안돼 아직 제대로 되지 않습니다
 "nmap <leader>w :exec '!ts python -c \"'getline('.')'\"'<CR>
 "nmap <leader>w :exec '!ts cargo build --release<CR>
@@ -360,7 +362,7 @@ let g:ctrlp_custom_ignore = {
 
 
 "ncm2
-autocmd BufEnter * call ncm2#enable_for_buffer()
+"autocmd BufEnter * call ncm2#enable_for_buffer()
 set completeopt=noinsert,menuone,noselect
 set nocompatible
 
@@ -382,9 +384,24 @@ set nocompatible
 "nmap <leader>f :CtrlP<cr>  
 nmap <leader>f :Files<cr>
 "nmap <leader>f :CtrlPCurWD<cr>
-nmap <leader>d :CtrlPBufTagAll<cr>
+"nmap <leader>d :CtrlPBufTagAll<cr>
+nmap <leader>d :BTags<cr>
+nmap <leader>k :BLines<cr>
 nmap <leader>s :Tags<cr>
-nmap <leader>a :Ag<cr>
+nmap <leader>a :Rg<cr>
+
+nmap <leader>g :ProjectFiles<cr>
+nmap <leader>f :Files<cr>
+nmap <leader>l :Lines<cr>
+
+nmap <silent> <Leader>g :BTags <C-R><C-W><CR>
+nmap <silent> <Leader>h :Tags <C-R><C-W><CR>
+nmap <silent> <Leader>j :Rg <C-R><C-W><CR>
+nmap <silent> <Leader>; :Lines <C-R><C-W><CR>
+
+
+"nmap <silent> <Leader>g :Ag <C-R><C-W><CR>
+
 
 " Easy bindings for its various modes
 nmap <leader>b :CtrlPBuffer<cr>

@@ -57,6 +57,7 @@ alias win='ssh 10.211.55.10'
 alias openelec='ssh root@192.168.0.39'
 alias scn='screen -h 3000'
 alias dt='tmux detach -a'
+alias td='tmux detach -a'
 
 # vim server-client 를 위해 env 별 사용할 단축 명령어를 만들어 놓습니다.
 alias vi3='vim --servername WIN --remote '
@@ -102,10 +103,10 @@ s() {
     echo sksmsqnwk11 | sudo -S DYLD_INSERT_LIBRARIES=/Applications/Simplify3D-4.0.1/Interface.dylib DYLD_FORCE_FLAT_NAMESPACE=1 /Applications/Simplify3D-4.0.1/Simplify3D.app/Contents/MacOS/Simplify3D
 }
 
-t0() {
-    open /Applications/Utilities/Xquartz.app
-    sh ~/.tmuxset-blog 
-}
+#t0() {
+    #open /Applications/Utilities/Xquartz.app
+    #sh ~/.tmuxset-blog 
+#}
 
 #t1() {
     #open /Applications/Utilities/Xquartz.app
@@ -140,7 +141,7 @@ xf() {
 
 
 #tmux workspace shortcut
-#alias t0='~/.tmuxset-blog'
+alias t0='~/.tmuxset-blog'
 alias t1='~/.tmuxset-misc'
 alias t2='~/.tmuxset-trader'
 alias t3='~/.tmuxset-win'
@@ -158,6 +159,13 @@ alias mygrep="grep -rn . --exclude={*.o,*.a,tags} -e "
 #fi
 
 #export NACL_SDK_ROOT=/Users/utylee/temp/nacl_sdk/pepper_49
+
+
+export CLANGHOME="/usr/local/Cellar/llvm/12.0.0"
+export PATH="$CLANGHOME/bin:$HOME/.cargo/bin:$PYENV_ROOT/bin:$PATH"
+#export LD_LIBRARY_PATH="/usr/local/clang_7.0.1/lib:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$CLANGHOME/lib:$LD_LIBRARY_PATH"
+
 
 export PATH="/Applications/Arduino.app/Contents/MacOS:$PATH"
 #export PATH="/usr/local/opt/python@2/libexec/bin:$PATH"
@@ -187,4 +195,13 @@ eval "$(pyenv init -)"
 pyenv virtualenvwrapper_lazy
 
 [ -f ~/.fzf.bash ] && source ~/.fzf.bash
-export FZF_DEFAULT_COMMAND='ag --hidden -g ""'
+#export FZF_DEFAULT_COMMAND='ag --hidden -g ""'
+
+export FZF_DEFAULT_COMMAND='rg --files --hidden --follow --no-ignore'
+#export FZF_DEFAULT_COMMAND='ag --hidden -g ""'
+#export FZF_DEFAULT_COMMAND='ag --hidden --path-to-ignore ~/.ignore -g ""'
+#export FZF_DEFAULT_COMMAND='ag -g ""'
+#alias ag='ag --hidden --path-to-ignore ~/.ignore '
+#export FZF_DEFAULT_COMMAND='ag --hidden --ignore "*tags" --ignore={"*css","*min.css","*min.js"} -g ""'  #export FZF_DEFAULT_COMMAND='ag --hidden -g ""'
+#export FZF_DEFAULT_COMMAND='ag'
+
