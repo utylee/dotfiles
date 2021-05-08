@@ -17,6 +17,7 @@ let g:ctrlp_use_caching = 0
 let g:simple_todo_map_normal_mode_keys = 0
 set rtp+=~/.fzf
 let g:fzf_history_dir = '~/.fzf/fzf-history'
+let g:fzf_layout = { 'down': '40%' }
 command! -bang -nargs=* Ag call fzf#vim#ag(<q-args>, '--hidden', <bang>0)
 
 "set t_SI=[6\ q
@@ -382,32 +383,31 @@ set nocompatible
 " Use a leader instead of the actual named binding
 " 자꾸 팅겨서 명령어 자체를 임시로 제거합니다
 "nmap <leader>f :CtrlP<cr>  
-nmap <leader>f :Files<cr>
 "nmap <leader>f :CtrlPCurWD<cr>
 "nmap <leader>d :CtrlPBufTagAll<cr>
-nmap <leader>d :BTags<cr>
-nmap <leader>k :BLines<cr>
-nmap <leader>s :Tags<cr>
 nmap <leader>a :Rg<cr>
-
-nmap <leader>g :ProjectFiles<cr>
+nmap <leader>s :Tags<cr>
+nmap <leader>d :BTags<cr>
 nmap <leader>f :Files<cr>
+nmap <leader>k :BLines<cr>
 nmap <leader>l :Lines<cr>
+
+"nmap <leader>g :ProjectFiles<cr>
 
 nmap <silent> <Leader>g :BTags <C-R><C-W><CR>
 nmap <silent> <Leader>h :Tags <C-R><C-W><CR>
 nmap <silent> <Leader>j :Rg <C-R><C-W><CR>
 nmap <silent> <Leader>; :Lines <C-R><C-W><CR>
 
-
 "nmap <silent> <Leader>g :Ag <C-R><C-W><CR>
 
-
 " Easy bindings for its various modes
-nmap <leader>b :CtrlPBuffer<cr>
-"nmap <leader>t :CtrlPMRU<cr>
+nmap <leader>b :Buffers<cr>
 nmap <leader>t :History<cr>
-nmap <leader>m :CtrlPMixed<cr>
+nmap <leader>m :Marks<cr>
+"nmap <leader>b :CtrlPBuffer<cr>
+"nmap <leader>t :CtrlPMRU<cr>
+"nmap <leader>m :CtrlPMixed<cr>
 "nmap <leader>bs :CtrlPMRU<cr>
 let g:ctrlp_match_window = 'max:12'
 

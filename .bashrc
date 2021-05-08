@@ -34,6 +34,7 @@ alias odod='tmux rename-window "od";TERM=xterm-256color-italic ssh -p 8022 odroi
 alias hc='tmux rename-window "hc";TERM=xterm-256color-italic ssh -p 8026 odroid@192.168.0.212'
 alias hchc='tmux rename-window "hc";TERM=xterm-256color-italic ssh -X -p 8026 odroid@utylee.dlinkddns.com'
 #alias hc='tmux rename-window "";TERM=xterm-256color-italic ssh -X -p 8026 odroid@utylee.dlinkddns.com'
+alias hc2='tmux rename-window "hc2";TERM=xterm-256color-italic ssh -X -p 22 odroid@192.168.0.213'
 #alias pi='TERM=xterm-256color-italic ssh -p 8023 pi@192.168.0.208'
 #alias pi='tmux rename-window "pi";TERM=xterm-256color-italic ssh -p 8023 pi@utylee.dlinkddns.com'
 #alias pi='tmux rename-window "pi";TERM=xterm-256color-italic ssh -p 8028 pi@utylee.dlinkddns.com'
@@ -198,6 +199,7 @@ pyenv virtualenvwrapper_lazy
 #export FZF_DEFAULT_COMMAND='ag --hidden -g ""'
 
 export FZF_DEFAULT_COMMAND='rg --files --hidden --follow --no-ignore'
+export FZF_CTRL_T_COMMAND='rg --files --hidden --follow --no-ignore'
 #export FZF_DEFAULT_COMMAND='ag --hidden -g ""'
 #export FZF_DEFAULT_COMMAND='ag --hidden --path-to-ignore ~/.ignore -g ""'
 #export FZF_DEFAULT_COMMAND='ag -g ""'
