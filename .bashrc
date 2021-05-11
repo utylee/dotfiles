@@ -23,9 +23,9 @@ alias hi='echo sksmsqnwk11 | sudo -S ifconfig en0 mtu 1500'
 alias tm='sudo sysctl debug.lowpri_throttle_enabled=0'
 
 alias we='curl http://utylee.duckdns.org:9010;echo -e "\n"'
-alias t='python ~/.virtualenvs/misc/src/translate_cmd.py ko '
-alias f='python ~/.virtualenvs/misc/src/translate_cmd.py en '
-alias j='python ~/.virtualenvs/misc/src/translate_cmd.py ja '                
+#alias t='python ~/.virtualenvs/misc/src/translate_cmd.py ko '
+#alias f='python ~/.virtualenvs/misc/src/translate_cmd.py en '
+#alias j='python ~/.virtualenvs/misc/src/translate_cmd.py ja '                
 alias ll='ls -lhF'
 alias vi='vim'
 alias lu='ssh utylee@192.168.0.201'
@@ -139,6 +139,13 @@ fx() {
 xf() {
         /Users/utylee/.virtualenvs/misc/bin/python /Users/utylee/.virtualenvs/misc/src/forex-test.py 1 $1
     }
+#translate-shell
+t() {
+    trans -b $1
+}
+f() {
+    trans -b $1 :en
+}
 
 
 #tmux workspace shortcut
