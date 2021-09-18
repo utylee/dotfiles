@@ -38,8 +38,11 @@ alias hc2='tmux rename-window "hc2";TERM=xterm-256color-italic ssh -X -p 8030 od
 #alias pi='TERM=xterm-256color-italic ssh -p 8023 pi@192.168.0.208'
 #alias pi='tmux rename-window "pi";TERM=xterm-256color-italic ssh -p 8023 pi@utylee.dlinkddns.com'
 #alias pi='tmux rename-window "pi";TERM=xterm-256color-italic ssh -p 8028 pi@utylee.dlinkddns.com'
-alias pi='tmux rename-window "pi";TERM=xterm-256color-italic ssh -p 8028 pi@192.168.0.211'
-alias pi5g='tmux rename-window "pi";TERM=xterm-256color-italic ssh -p 8028 pi@192.168.0.221'
+
+#alias pi='tmux rename-window "pi";TERM=xterm-256color-italic ssh -p 8028 pi@192.168.0.211'
+#alias pi5g='tmux rename-window "pi";TERM=xterm-256color-italic ssh -p 8028 pi@192.168.0.221'
+alias pi='tmux rename-window "pi";TERM=xterm-256color-italic ssh -p 8028 pi@192.168.0.221'
+
 alias pipi='tmux rename-window "pi";TERM=xterm-256color-italic ssh -p 8028 pi@utylee.dlinkddns.com'
 #alias pi2='TERM=xterm-256color-italic ssh -p 8024 pi@192.168.0.209'
 alias octo='tmux rename-window "octo";ssh -p 8027 pi@octopi.local'
