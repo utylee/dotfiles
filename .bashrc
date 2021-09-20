@@ -93,6 +93,20 @@ parse_git_branch() {
    git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/(\1)/'
 }
 
+# utylee copy
+uc() {
+    curl http://192.168.0.212:9212/c/"$1"
+    #curl http://utylee.duckdns.org:9212/c/"$1"
+}
+
+ur() {
+    curl http://192.168.0.212:9212/r
+}
+
+uv() {
+    curl http://192.168.0.212:9212/vt
+}
+
 m() {
     #echo $2 | mutt -s "$1" utylee@gmail.com -a "$3"
     echo $2 | mutt -s "$1" utylee@gmail.com
