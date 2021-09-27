@@ -16,6 +16,8 @@ export DISPLAY=:0
 export GPG_TTY=$(tty)
 # gpg 에서 ioctrl 오류를 해결하기 위함입니다
 
+echo -ne   '\eP\e]12;#888888\a'  # Cursor       -> red
+
 
 alias bye='echo sksmsqnwk11 | sudo -S ifconfig en0 mtu 500'
 alias hi='echo sksmsqnwk11 | sudo -S ifconfig en0 mtu 1500'
@@ -106,18 +108,18 @@ uc() {
     #b="${b//\%/_u_pe_}"        #%는 잘 받아지는 것 같습니다
     b="${b//\&/_u_im_}"
     b="${b//\ /_u_sp_}"
-    curl http://192.168.0.212:9212/c/"$b"
+    curl http://192.168.0.212:9202/c/"$b"
     #curl http://192.168.0.212:9212/c/"$1"
     #curl http://utylee.duckdns.org:9212/c/"$1"
 }
 alias ua=uc
 
 ur() {
-    curl http://192.168.0.212:9212/r
+    curl http://192.168.0.212:9202/r
 }
 
 uv() {
-    curl http://192.168.0.212:9212/vt
+    curl http://192.168.0.212:9202/vt
 }
 
 
