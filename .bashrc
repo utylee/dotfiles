@@ -177,6 +177,9 @@ xf() {
 t() {
     trans -b $1
 }
+tt() {
+    trans $1
+}
 f() {
     trans -b $1 :en
 }
