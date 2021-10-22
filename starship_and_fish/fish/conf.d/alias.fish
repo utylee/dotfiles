@@ -8,7 +8,39 @@ end
 
 function ts
     tmux send-keys -t 1 "$argv" Enter
+end
 
+function vi0
+    set filename $PWD/$argv[1]
+    tmux send-keys -t vBLOG.0 ":e $filename" C-m
+    tmux select-window -t vBLOG
+    tmux select-pane -t vBLOG.0
+end
+
+function vi1
+    set filename $PWD/$argv[1]
+    tmux send-keys -t vMISC.0 ":e $filename" C-m
+    tmux select-window -t vMISC
+    tmux select-pane -t vMISC.0
+end
+
+function uc
+    set b $argv
+    set b (string replace '?' '_u_qa_' "$b")
+    set b (string replace '&' '_u_im_' "$b")
+    set b (string replace ' ' '_u_sp_' "$b")
+    #echo $b
+    curl http://192.168.0.202:9202/c/"$b"
+end
+
+alias ua=uc
+
+function ur
+    curl http://192.168.0.202:9202/r
+end
+
+function uv
+    curl http://192.168.0.202:9202/vt
 end
 
 alias td="dt"

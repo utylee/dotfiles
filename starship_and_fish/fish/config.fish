@@ -11,8 +11,8 @@ fish_vi_key_bindings
 
 #set -gx EDITOR /usr/bin/vi
 
-set -gx LANG en_US.UTF-8
-set -gx LC_CTYPE en_US.UTF-8
+#set -gx LANG en_US.UTF-8
+#set -gx LC_CTYPE en_US.UTF-8
 
 # PATH
 #set CLANGHOME /usr/local/clang+llvm-12.0.1-x86_64-linux-gnu-ubuntu-16.04
