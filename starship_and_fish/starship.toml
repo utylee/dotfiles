@@ -13,7 +13,7 @@ $python\
 [MAC](bold fg:#7fa31c)\
 $username\
 $git_branch$git_commit\
-$directory[>](#2abfb0 bold) \
+$directory[>](#7fa31c bold) \
 """
 #format = """
 #$username\
@@ -31,7 +31,7 @@ disabled = true
 [python]
 ##symbol = "👾 "
 #format = "[${symbol}${version}\\($virtualenv\\)]($style) "
-format = "[\\($virtualenv\\)](bold #a87932) "
+format = "[\\($virtualenv\\)](fg:#222222 bg:#a87932) "
 # 아래 파일로 버전표시를 하는 것 같은데 env 용으로만 사용키 위해 아래를 다 비웠습니다
 detect_files = []
 detect_folders = []
