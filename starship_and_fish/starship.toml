@@ -13,8 +13,10 @@ $python\
 [MAC](bold fg:#7fa31c)\
 $username\
 $git_branch$git_commit\
-$directory[>](#7fa31c bold) \
+$directory\
+$character\
 """
+#[>](#7fa31c bold) \
 #format = """
 #$username\
 #$git_branch$git_commit$directory[>](#2abfb0 bold) \
@@ -23,10 +25,14 @@ $directory[>](#7fa31c bold) \
 #format = """$character"""
 #296685
 
-right_format = """$time"""
+#right_format = """$time"""
 
 [line_break]
 disabled = true 
+
+[character]
+success_symbol = "[❯](bold #7fa31c)"
+vicmd_symbol = "[❮](bold #7fa31c)"
 
 [python]
 ##symbol = "👾 "
@@ -73,6 +79,6 @@ disabled = false
 show_always = true
 
 [time]
-disabled = false
+disabled = true
 #format = '[🕙$time](#555555) '
 format = '[$time](#555555) '
