@@ -44,6 +44,6 @@ _
 
 # VENV
 set -gx WORKON_HOME $HOME/.virtualenvs
-
+eval (gdircolors -c ~/.dircolors)
 
 starship init fish | source

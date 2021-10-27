@@ -18,7 +18,30 @@ let g:simple_todo_map_normal_mode_keys = 0
 set rtp+=~/.fzf
 let g:fzf_history_dir = '~/.fzf/fzf-history'
 let g:fzf_layout = { 'down': '40%' }
+let g:fzf_preview_window = []
 command! -bang -nargs=* Ag call fzf#vim#ag(<q-args>, '--hidden', <bang>0)
+
+let g:fzf_colors =
+\ { 'fg':      ['fg', 'Normal'],
+  \ 'bg':      ['bg', 'Normal'],
+  \ 'query':   ['fg', 'Ignore'],
+  \ 'hl':      ['fg', 'Comment'],
+  \ 'fg+':     ['fg', 'CursorLine', 'CursorColumn', 'Normal'],
+  \ 'bg+':     ['bg', 'CursorLine', 'CursorColumn'],
+  \ 'hl+':     ['fg', 'Statement'],
+  \ 'info':    ['fg', 'PreProc'],
+  \ 'border':  ['fg', 'Ignore'],
+  \ 'prompt':  ['fg', 'Conditional'],
+  \ 'pointer': ['fg', 'Exception'],
+  \ 'marker':  ['fg', 'Ignore'],
+  \ 'spinner': ['fg', 'Label'],
+  \ 'header':  ['fg', 'Comment'] }
+
+let g:terminal_ansi_colors = [
+    \ '#073642', '#dc322f', '#859900', '#b58900',
+    \ '#268bd2', '#d33682', '#2aa198', '#eee8d5',
+    \ '#002b36', '#cb4b16', '#586e75', '#657b83',
+    \ '#839496', '#6c71c4', '#93a1a1', '#fdf6e3']
 
 "set t_SI=[6\ q
 "set t_SR=[4\ q
