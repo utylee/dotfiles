@@ -1,6 +1,8 @@
 [user]
 	name = utylee
 	email = utylee@gmail.com
-	fuck = none
 [core]
 	quotepath = false
+[i18n]
+    commitEncoding = cp949
+    logOutputEncoding = cp949

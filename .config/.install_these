@@ -27,7 +27,7 @@ git clone https://github.com/x-motemen/ghq
 		.프로젝트 폴더내에서 go build를 하면 해당 바이너리를 go install을 하면 ~/go/bin 폴더에 설치
 			됩니다
 		.go 폴더를 숨김폴더로 변경합니다 
-			go env -w GOPATH="/home/utylee/.go"
+			go env -w GOPATH="/Users/utylee/.go"
 
 
 #* virtualfish 를 설치합니다. virtualenvwrapper가 되지 않아 fish용 대안입니다
