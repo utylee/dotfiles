@@ -1,11 +1,6 @@
 [user]
 	name = utylee
 	email = utylee@gmail.com
-[core]
-	quotepath = false
-[i18n]
-    commitEncoding = cp949
-    logOutputEncoding = cp949
 
 [alias]
 	a = "!git status --short | fzf | awk '{print $2}' | xargs git add"
@@ -31,5 +26,4 @@
 	#edit-unmerged = "!f() { git ls-files --unmerged | cut -f2 | sort -u ; }; vim `f`"
 	# add conflicted file on merge
 	#add-unmerged = "!f() { git ls-files --unmerged | cut -f2 | sort -u ; }; git add `f`"
-
 
