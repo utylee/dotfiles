@@ -10,7 +10,7 @@ end
 
 set -Ux fish_term24bit 1
 
-set -gx EDITOR /usr/bin/vi
+set -gx EDITOR /usr/local/bin/vi
 set -gx GHQ_ROOT /Users/utylee/.ghq
 
 # PATH
