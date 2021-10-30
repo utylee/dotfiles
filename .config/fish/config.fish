@@ -15,6 +15,8 @@ set -gx GHQ_ROOT /Users/utylee/.ghq
 
 # PATH
 # mac은 xcode-select 자체 생태계가 있으므로 굳이 설정하지 않습니다
+fish_add_path /usr/local/bin /Users/utylee/.go/bin
+
 #set CLANGHOME /usr/local/clang+llvm-12.0.1-x86_64-linux-gnu-ubuntu-16.04
 #set -x PATH $CLANGHOME/bin $PATH
 #set -x PATH /usr/local/go1.17.2/bin /usr/local/node-v14.18.1-linux-x64/bin /mnt/c/Windows/System32/WindowsPowrShell/v1.0/ /mnt/c/Python310/ /mnt/c/Python310/Scripts $PATH
