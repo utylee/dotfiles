@@ -1,0 +1,45 @@
+* install fish-shell
+git clone https://github.com/fish-shell/fish-shell.git
+cd fish-shell; mkdir build ; cd build ; cmake ..; make; sudo make install 
+	*if MACOS
+		mkdir build; cd build
+		cmake .. -G Xcode -DBUILD_DOCS=OFF -DCMAKE_BUILD_TYPE=RelWithDebInfo
+		xcodebuild
+		xcodebuild -scheme install
+		잘 안됩니다. 빌드는 됐는데 debug 빌드로 나오고 찝찝합니다.그냥 brew install 합시다 
+echo /usr/local/bin/fish >>/etc/shells
+chsh -s /usr/local/bin/fish
+
+
+* install fisher
+curl -sL https://git.io/fisher | source && fisher install jorgebucaran/fisher
+
+* install fisher pyenv plugin
+fisher install daenney/pyenv
+
+* install z plugin
+fisher install jethrokuan/z
+
+* install ghq
+git clone https://github.com/x-motemen/ghq
+	* go install and build
+		.다운로드 후 /usr/local/ 에 넣고 bin폴더를 path를 걸어줍니다
+		.프로젝트 폴더내에서 go build를 하면 해당 바이너리를 go install을 하면 ~/go/bin 폴더에 설치
+			됩니다
+		.go 폴더를 숨김폴더로 변경합니다 
+			go env -w GOPATH="/home/utylee/.go"
+
+
+#* virtualfish 를 설치합니다. virtualenvwrapper가 되지 않아 fish용 대안입니다
+#(https://github.com/justinmayer/virtualfish)
+#pip install virtualfish
+#vf install
+#vf new myvirtualenv
+#vf activate
+#vf cd 
+
+* starship prompt
+sh -c "$(curl -fsSL https://starship.rs/install.sh)"
+	* 이미 fish 상태라면 아래아래처럼 합니다
+	sh -c (curl -fsSL https://starship.rs/install.sh)
+
