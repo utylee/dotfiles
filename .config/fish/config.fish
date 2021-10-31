@@ -1,11 +1,14 @@
 if status is-interactive
     # Commands to run in interactive sessions can go here
 	# CURSOR
+	echo -ne '\eP\e]12;#7fa31c\a'	# mac
 	set fish_greeting ''
 	fish_vi_key_bindings
-	echo -ne '\eP\e]12;#7fa31c\a'	# mac
-	eval (gdircolors -c ~/.dircolors)
 	starship init fish | source
+end
+if status is-login
+    # Commands to run in interactive sessions can go here
+	eval (gdircolors -c ~/.dircolors)
 end
 
 set -Ux fish_term24bit 1
@@ -47,4 +50,3 @@ set -gx FZF_CTRL_R_OPTS "--reverse --height 50%"
 set -gx WORKON_HOME $HOME/.virtualenvs
 
 #source ~/.mintty-colors-solarized/mintty-solarized-dark.sh
-
