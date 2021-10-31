@@ -1,5 +1,8 @@
 .git
 .cache
+.rustup
+.local
+.virtualenvs-bak
 AppData
 Applications
 Applications\ \(Parallels\)
@@ -11,11 +14,14 @@ Mail
 Movies
 Music
 Pictures
+Public
 Qt
 Samsung
 Trinity
 Trinity_7.1.5
 iCloud
+arduino
 azeroth
 django
+qmk_firmware
 shared
