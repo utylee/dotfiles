@@ -1,14 +1,13 @@
 if status is-interactive
     # Commands to run in interactive sessions can go here
 	# CURSOR
-	echo -ne '\eP\e]12;#7fa31c\a'	# mac
 	set fish_greeting ''
 	fish_vi_key_bindings
-	starship init fish | source
+	echo -ne '\eP\e]12;#7fa31c\a'	# mac
+	eval (gdircolors -c ~/.dircolors)
 end
 if status is-login
-    # Commands to run in interactive sessions can go here
-	eval (gdircolors -c ~/.dircolors)
+	starship init fish | source
 end
 
 set -Ux fish_term24bit 1
@@ -18,7 +17,7 @@ set -gx GHQ_ROOT /Users/utylee/.ghq
 
 # PATH
 # mac은 xcode-select 자체 생태계가 있으므로 굳이 설정하지 않습니다
-fish_add_path /usr/local/bin /Users/utylee/.go/bin
+fish_add_path /usr/local/bin /Users/utylee/.go/bin /usr/local/sbin
 
 #set CLANGHOME /usr/local/clang+llvm-12.0.1-x86_64-linux-gnu-ubuntu-16.04
 #set -x PATH $CLANGHOME/bin $PATH
@@ -29,11 +28,15 @@ fish_add_path /usr/local/bin /Users/utylee/.go/bin
 
 # FZF
 # fzf을 직접입력해 파일명 탐색 명내용 
-set -gx FZF_DEFAULT_COMMAND 'fd --type file --color=always --follow --hidden --exclude .git'
+#set -gx FZF_DEFAULT_COMMAND 'fd --type file --color=always --follow --hidden --exclude .git'
+# 기본 데스크탑 앱이 사용자 폴더에 다 있어서 쓸게없이 검색할 게 많은 걸 제거했습니다
+#set -gx FZF_DEFAULT_COMMAND 'fd --type file --follow --hidden --color=always -E .git -E Library -E Applications -E Documents -E Qt -E Downloads -E shared -E Applications\ \(Parallels\) -E Music'
+set -gx FZF_DEFAULT_COMMAND 'fd --type file --follow --hidden --color=always'
 set -gx FZF_DEFAULT_OPTS "--ansi"
 #
 #set -gx FZF_CTRL_T_COMMAND "fd --type d --hidden --color=always"
 set -gx FZF_CTRL_T_COMMAND "$FZF_DEFAULT_COMMAND"
+#set -gx FZF_CTRL_F_COMMAND "fd --type d --hidden --color=always -E .git -E Library -E Applications -E Documents -E Qt -E Downloads -E shared -E Applications\ \(Parallels\) -E Music . $HOME"
 set -gx FZF_CTRL_F_COMMAND "fd --type d --hidden --color=always . $HOME"
 set -gx FZF_ALT_C_COMMAND "fd --type d --hidden --color=always"
 set -gx FZF_CTRL_R_OPTS "--reverse --height 50%"
@@ -50,3 +53,4 @@ set -gx FZF_CTRL_R_OPTS "--reverse --height 50%"
 set -gx WORKON_HOME $HOME/.virtualenvs
 
 #source ~/.mintty-colors-solarized/mintty-solarized-dark.sh
+
