@@ -3,14 +3,19 @@ set nocompatible
 "source $VIMRUNTIME/mswin.vim
 "behave mswin
 
-set timeoutlen=1000 ttimeoutlen=0
+if &shell =~# 'fish$'
+    set shell=sh
+endif
+set iskeyword+=-
+
+set timeoutlen=1000 ttimeoutlen=10
 
 " ctrlp가 ag를 사용하게 합니다
 set grepprg=ag\ --nogroup\ --nocolor
 " Use ag in CtrlP for listing files. Lightning fast and respects .gitignore
-let g:ctrlp_user_command = 'ag %s -l --nocolor -g ""'
+"let g:ctrlp_user_command = 'ag %s -l --nocolor -g ""'
 " " ag is fast enough that CtrlP doesn't need to cache
-let g:ctrlp_use_caching = 0
+"let g:ctrlp_use_caching = 0
 "if executable('ag')
 "endif
 
@@ -102,11 +107,11 @@ nnoremap <F4> :e %:p:s,.h$,.X123X,:s,.cpp$,.h,:s,.X123X$,.cpp,<CR>
 
 
 
-" bashrc 의 alias를 읽기 위한 설정입니다
-"let $BASH_ENV = "~/.bashrc"
-let $BASH_ENV = "~/.bash_functions"
+"" bashrc 의 alias를 읽기 위한 설정입니다
+""let $BASH_ENV = "~/.bashrc"
+"let $BASH_ENV = "~/.bash_functions"
 
-set tags+=~/temp/Trinity/repo/src/tags
+"set tags+=~/temp/Trinity/repo/src/tags
 
 
 " 아래stackoverflow를 봤을 때 이게 정답인 것 같습니다
@@ -227,10 +232,85 @@ filetype plugin indent on
 syntax on
 
 "let g:virtualenv_directory = '/home/utylee/00-Projects/venv-tyTrader'
+
+
+"vim-crystalline setup
+function! StatusLine(current, width)
+  let l:s = ''
+
+  if a:current
+    let l:s .= crystalline#mode() . crystalline#right_mode_sep('')
+  else
+    let l:s .= '%#CrystallineInactive#'
+  endif
+  let l:s .= ' %f%h%w%m%r '
+  if a:current
+    let l:s .= crystalline#right_sep('', 'Fill') . ' %{fugitive#head()}'
+  endif
+
+  let l:s .= '%='
+  if a:current
+    let l:s .= crystalline#left_sep('', 'Fill') . ' %{&paste ?"PASTE ":""}%{&spell?"SPELL ":""}'
+    let l:s .= crystalline#left_mode_sep('')
+  endif
+  if a:width > 80
+    let l:s .= ' %{&ft}[%{&fenc!=#""?&fenc:&enc}][%{&ff}] %l/%L %c%V %P '
+  else
+    let l:s .= ' '
+  endif
+
+  return l:s
+endfunction
+
+function! TabLine()
+  let l:vimlabel = has('nvim') ?  ' NVIM ' : ' VIM '
+  return crystalline#bufferline(2, len(l:vimlabel), 1) . '%=%#CrystallineTab# ' . l:vimlabel
+endfunction
+
+"let g:crystalline_separators = ['>', '<']
+let g:crystalline_enable_sep = 1
+let g:crystalline_statusline_fn = 'StatusLine'
+let g:crystalline_tabline_fn = 'TabLine'
+"let g:crystalline_theme = 'default'
+"let g:crystalline_theme = 'hybrid'
+let g:crystalline_theme = 'onedark'
+
+set showtabline=2
+set guioptions-=e
 set laststatus=2
-let g:airline_powerline_fonts = 1
-let g:airline#extensions#virtualenv#enabled = 0
-let g:airline#extensions#tagbar#flags = 'f'
+
+"set laststatus=2
+"let g:airline_powerline_fonts = 1
+"let g:airline#extensions#virtualenv#enabled = 0
+"let g:airline#extensions#tagbar#flags = 'f'
+"let g:airline#extensions#hunks#enabled = 0
+"let g:airline#extensions#whitespace#enabled = 0
+"au VimEnter * let g:airline_section_x = airline#section#create(['tagbar']) | :AirlineRefresh
+"
+"let g:airline_section_warning=''
+"let g:airline_section_error=''
+"let g:airline_section_statistics=''
+"let g:airline_mode_map = {
+"\ '__' : '-',
+"\ 'n'  : 'N',
+"\ 'i'  : 'I',
+"\ 'R'  : 'R',
+"\ 'v'  : 'V',
+"\ 'V'  : 'V-L',
+"\ 'c'  : 'C',
+"\ 's'  : 'S',
+"\ 'S' : 'S-L',
+"\ }
+
+"" Enable the list of buffers
+"let g:airline#extensions#tabline#enabled = 1
+"
+"" Show just the filename
+"let g:airline#extensions#tabline#fnamemod = ':t'
+"let g:airline_theme='raven'
+
+
+
 
 "let g:airline_section_a = airline#sections#create(['mode', %{airline#extensions#branch#get_head()}''branch'])
 
@@ -239,27 +319,9 @@ let g:airline#extensions#tagbar#flags = 'f'
 	"return empty(head) ? '' : printf(' %s', airline#extensions#branch#get_head())
 "endfunction
 
-let g:airline#extensions#hunks#enabled = 0
-let g:airline#extensions#whitespace#enabled = 0
 "let g:airline_section_c = '%f'
 " tagbar 업데이트가 너무 느려서 확인해보니 기본 4000이었습니다
 set updatetime=1000
-au VimEnter * let g:airline_section_x = airline#section#create(['tagbar']) | :AirlineRefresh
-
-let g:airline_section_warning=''
-let g:airline_section_error=''
-let g:airline_section_statistics=''
-let g:airline_mode_map = {
-\ '__' : '-',
-\ 'n'  : 'N',
-\ 'i'  : 'I',
-\ 'R'  : 'R',
-\ 'v'  : 'V',
-\ 'V'  : 'V-L',
-\ 'c'  : 'C',
-\ 's'  : 'S',
-\ 'S' : 'S-L',
-\ }
 "let g:airline_section_b = airline#section#create(['%{virtualenv#statusline()}'])
 
 
@@ -273,11 +335,6 @@ let g:airline_mode_map = {
 "let g:virtualenv_stl_format = '[%n]'
 "let g:Powerline_symbols = 'fancy'
 
-" Enable the list of buffers
-let g:airline#extensions#tabline#enabled = 1
-
-" Show just the filename
-let g:airline#extensions#tabline#fnamemod = ':t'
 
 "function! MyOverride(...)
 "	call a:l.add_section('StatusLine', 'all')
@@ -289,7 +346,7 @@ let g:airline#extensions#tabline#fnamemod = ':t'
 "let g:jedi#squelch_py_warning = 1
 
 let g:user_emmet_install_global = 0
-autocmd FileType html,css EmmetInstall
+autocmd FileType html,css,js EmmetInstall
 
 au BufRead,BufNewFile */etc/nginx/* set ft=nginx
 au BufRead,BufNewFile */nginx/* set ft=nginx
@@ -370,18 +427,18 @@ nmap <leader>5 :syntax sync fromstart<CR>
 "map <C-T> :tabnew<CR>:wincmd w<CR>
 
 " Setup some default ignores
-let g:ctrlp_custom_ignore = {
-  \ 'dir':  '\v[\/](\.(git|hg|svn)|\_site)$',
-  \ 'file': '\v\.(exe|so|dll|class|png|jpg|jpeg|avi|mkv|mov|mp4|wma|xlsx|mp3|ini|doc|docx|un|bak)$',
-\}
+"let g:ctrlp_custom_ignore = {
+  "\ 'dir':  '\v[\/](\.(git|hg|svn)|\_site)$',
+  "\ 'file': '\v\.(exe|so|dll|class|png|jpg|jpeg|avi|mkv|mov|mp4|wma|xlsx|mp3|ini|doc|docx|un|bak)$',
+"\}
 " Setup some default ignores
-let g:ctrlp_buftag_types = {
-\ 'css' : '--css-types=vcitm',
-\ }
-let g:ctrlp_custom_ignore = {
-\ 'dir':  '\v[\/](\.(git|hg|svn)|\_site)$',
-\ 'file': '\v\.(exe|so|dll|class|png|jpg|jpeg|avi|mkv|mov|mp4|wma|xlsx|mp3|ini|doc|docx|un|bak)$',
-\}
+"let g:ctrlp_buftag_types = {
+"\ 'css' : '--css-types=vcitm',
+"\ }
+"let g:ctrlp_custom_ignore = {
+"\ 'dir':  '\v[\/](\.(git|hg|svn)|\_site)$',
+"\ 'file': '\v\.(exe|so|dll|class|png|jpg|jpeg|avi|mkv|mov|mp4|wma|xlsx|mp3|ini|doc|docx|un|bak)$',
+"\}
 
 
 
@@ -432,7 +489,7 @@ nmap <leader>m :Marks<cr>
 "nmap <leader>t :CtrlPMRU<cr>
 "nmap <leader>m :CtrlPMixed<cr>
 "nmap <leader>bs :CtrlPMRU<cr>
-let g:ctrlp_match_window = 'max:12'
+"let g:ctrlp_match_window = 'max:12'
 
 " Split size change
 nmap <leader>- :resize -5<cr>
@@ -456,7 +513,6 @@ colorscheme solarized_sd_utylee
 "set air-line theme {dark, molokai, ...}
 "let g:airline_theme='molokai'
 "let g:airline_theme='base16_atelierlakeside'
-let g:airline_theme='raven'
 "let g:airline_theme='solarized'
 "let g:airline_theme='dark'
 "let g:airline_theme='tomorrow'
@@ -523,7 +579,7 @@ set fileencodings=utf-8,cp949
 "set guifont=Menlo\ for\ Powerline:h19
 "set guifont=Menlo\ for\ Powerline
 "macOS 상에서 iTerm에서는 폰트설정을 따로해주므로 의미가 없는 것 같습니다
-set guifont=Input
+"set guifont=Input
 "set font=Ubuntu\ Mono\ derivative\ Powerline:h19
 "set guifontwide=NanumGothicCoding:h24
 "set guifontwide=NanumGothicCoding:h15:cDEFAULT
