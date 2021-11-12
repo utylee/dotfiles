@@ -471,25 +471,24 @@ nmap <leader>d :BTags<cr>
 nmap <leader>f :Files<cr>
 nmap <leader>k :BLines<cr>
 nmap <leader>l :Lines<cr>
-
-"nmap <leader>g :ProjectFiles<cr>
-
-nmap <silent> <Leader>g :BTags <C-R><C-W><CR>
-nmap <silent> <Leader>h :Tags <C-R><C-W><CR>
-nmap <silent> <Leader>j :Rg <C-R><C-W><CR>
-nmap <silent> <Leader>; :Lines <C-R><C-W><CR>
-
-"nmap <silent> <Leader>g :Ag <C-R><C-W><CR>
-
-" Easy bindings for its various modes
 nmap <leader>b :Buffers<cr>
 nmap <leader>t :History<cr>
 nmap <leader>m :Marks<cr>
-"nmap <leader>b :CtrlPBuffer<cr>
-"nmap <leader>t :CtrlPMRU<cr>
-"nmap <leader>m :CtrlPMixed<cr>
-"nmap <leader>bs :CtrlPMRU<cr>
-"let g:ctrlp_match_window = 'max:12'
+"nmap <leader>g :ProjectFiles<cr>
+
+" Easy bindings for its various modes
+
+nmap <silent> <leader>ud :BTags <C-R><C-W><CR>
+nmap <silent> <Leader>us :Tags <C-R><C-W><CR>
+nmap <silent> <Leader>ua :Rg <C-R><C-W><CR>
+nmap <silent> <Leader>ul :Lines <C-R><C-W><CR>
+nmap <silent> <Leader>uk :BLines <C-R><C-W><CR>
+
+" for vim-fugitive
+nmap <leader>gd :Gdiffsplit<cr>
+nmap <leader>gb :Git blame<cr>
+nmap <leader>gw :Gwrite<cr>
+nmap <leader>gr :Gread<cr>
 
 " Split size change
 nmap <leader>- :resize -5<cr>
