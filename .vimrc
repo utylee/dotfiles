@@ -405,8 +405,14 @@ nmap <leader>Z :ProsessionDelete<cr>
 "nmap <leader>w :exec '!ts cargo build --release<CR>
 nmap <leader>w :!ts cargo run<CR> <CR>
 nmap <leader>` :set fullscreen<CR>
-nmap <leader>q :bd!<CR>
-nmap <leader>Q :cclose<CR>
+
+"nmap <leader>q :bd!<CR>
+"nmap <leader>Q :cclose<CR>
+" buffer close all shortcut added
+nmap <leader>qq :bd!<CR>
+nmap <leader>qa :%bd!<CR>
+nmap <leader>qc :cclose<CR>
+
 map <F7> :NERDTreeTabsToggle<CR>
 map <F2> :NERDTreeToggle<CR>
 nnoremap <leader>5 :GundoToggle<CR>
@@ -489,6 +495,9 @@ nmap <leader>gd :Gdiffsplit<cr>
 nmap <leader>gb :Git blame<cr>
 nmap <leader>gw :Gwrite<cr>
 nmap <leader>gr :Gread<cr>
+"from fzf
+nmap <leader>gc :BCommits<cr>
+nmap <leader>gx :Commits<cr>
 
 " Split size change
 nmap <leader>- :resize -5<cr>
