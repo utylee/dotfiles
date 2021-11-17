@@ -1,19 +1,22 @@
 if status is-interactive
     # Commands to run in interactive sessions can go here
-	# CURSOR
 	set fish_greeting ''
 	fish_vi_key_bindings
+	# CURSOR
+    #printf '%b' '\e]12;red\a'
+    #echo -e "\033]Pl7fa31c\033\\"
 	echo -ne '\eP\e]12;#7fa31c\a'	# mac
 	eval (gdircolors -c ~/.dircolors)
+	starship init fish | source
 end
 if status is-login
-	starship init fish | source
 end
 
 set -Ux fish_term24bit 1
 
 set -gx EDITOR /usr/local/bin/vi
 set -gx GHQ_ROOT /Users/utylee/.ghq
+set -gx TERM xterm-256color-italic
 
 # PATH
 # mac은 xcode-select 자체 생태계가 있으므로 굳이 설정하지 않습니다
@@ -39,7 +42,7 @@ set -gx FZF_CTRL_T_COMMAND "$FZF_DEFAULT_COMMAND"
 #set -gx FZF_CTRL_F_COMMAND "fd --type d --hidden --color=always -E .git -E Library -E Applications -E Documents -E Qt -E Downloads -E shared -E Applications\ \(Parallels\) -E Music . $HOME"
 set -gx FZF_CTRL_F_COMMAND "fd --type d --hidden --color=always . $HOME"
 set -gx FZF_ALT_C_COMMAND "fd --type d --hidden --color=always"
-set -gx FZF_CTRL_R_OPTS "--reverse --height 50%"
+set -gx FZF_CTRL_R_OPTS "--reverse --height 100%"
 #set -gx FZF_CTRL_T_COMMAND "$FZF_DEFAULT_COMMAND"
 
 #set -gx FZF_DEFAULT_COMMAND "rg --files --hidden --follow --no-ignore"
