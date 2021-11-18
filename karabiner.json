@@ -82,7 +82,7 @@
                         ]
                     },
                     {
-                        "description": "right command + 2 - Activates Chrome",
+                        "description": "right command + 2 - Activates Cantata",
                         "manipulators": [
                             {
                                 "from": {
@@ -95,7 +95,7 @@
                                 },
                                 "to": [
                                     {
-                                        "shell_command": "open \"/Applications/Google Chrome.app\""
+                                        "shell_command": "open \"/Applications/Cantata.app\""
                                     }
                                 ],
                                 "type": "basic"
@@ -345,7 +345,7 @@
                     },
                     "to": [
                         {
-                            "key_code": "vk_none"
+                            "key_code": "f8"
                         }
                     ]
                 },
@@ -355,7 +355,7 @@
                     },
                     "to": [
                         {
-                            "key_code": "vk_none"
+                            "key_code": "f9"
                         }
                     ]
                 },
