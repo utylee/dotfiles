@@ -409,15 +409,13 @@ nmap <leader>` :set fullscreen<CR>
 "nmap <leader>q :bd!<CR>
 "nmap <leader>Q :cclose<CR>
 " buffer close all shortcut added
-nmap <leader>qq :bd!<CR>
-nmap <leader>qa :%bd!<CR>
-nmap <leader>qc :cclose<CR>
 
-map <F7> :NERDTreeTabsToggle<CR>
-map <F2> :NERDTreeToggle<CR>
-nnoremap <leader>5 :GundoToggle<CR>
-nmap <leader>2 :NERDTreeToggle<CR>
-map <F1> :e $MYVIMRC<CR>
+nmap <leader>q :bd!<CR>
+nmap ,q :%bd!<CR>
+nmap ,c :cclose<CR>
+" ;의 반대방향 역할을 하는 ,키를 더블클릭으로 사용하기 위함입니다
+nmap ,, ,
+
 nmap <leader>1 :e $MYVIMRC<CR>
 nmap <leader>5 :syntax sync fromstart<CR>
 "map <A-3> :tabnext<CR>
