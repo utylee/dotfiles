@@ -175,14 +175,15 @@ nnoremap <F4> :e %:p:s,.h$,.X123X,:s,.cpp$,.h,:s,.X123X$,.cpp,<CR>
 
 " 아래stackoverflow를 봤을 때 이게 정답인 것 같습니다
 "https://stackoverflow.com/questions/6488683/how-do-i-change-the-vim-cursor-in-insert-normal-mode/42118416#42118416
+
 let &t_SI = "\e[5 q"
 let &t_EI = "\e[2 q"
 
 " optional reset cursor on start:
-augroup myCmds
-au!
-autocmd VimEnter * silent !echo -ne "\e[2 q"
-augroup END
+"augroup myCmds
+"au!
+"autocmd VimEnter * silent !echo -ne "\e[2 q"
+"augroup END
 
 "wrong solution
 "if exists('$TMUX')
