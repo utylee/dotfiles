@@ -313,6 +313,12 @@ function! StatusLine(current, width)
     let l:s .= crystalline#right_sep('', 'Fill') . ' %{fugitive#head()}'
   endif
 
+  if a:current
+    let l:s .= ' %{tagbar#currenttag(" %s\ ","")}'
+    "let l:s .= crystalline#right_sep('', 'Fill') . ' %{tagbar#currenttag(" %s\ ","")}'
+"set statusline+=%{tagbar#currenttag('[%s]\ ','')}
+  endif
+
   let l:s .= '%='
   if a:current
     let l:s .= crystalline#left_sep('', 'Fill') . ' %{&paste ?"PASTE ":""}%{&spell?"SPELL ":""}'
@@ -410,13 +416,20 @@ set updatetime=1000
 "let g:jedi#auto_initialization = 1 
 "let g:jedi#squelch_py_warning = 1
 
-let g:user_emmet_install_global = 0
-autocmd FileType html,css,js EmmetInstall
+" emmet-vim 을 html과 css에서만 사용하는 설정
+
+"let g:user_emmet_install_global = 0
+"autocmd FileType html,css EmmetInstall
+let g:user_emmet_leader_key='<C-Q>'
+
+let g:closetag_filenames = "*.html,*.xhtml,*.phtml,*.erb,*.jsx,*.js"
+let g:closetag_xhtml_filenames = '*.xhtml,*.jsx,*.js,*.erb'
+let g:closetag_emptyTags_caseSensitive = 1
+let g:closetag_shortcut = '>'
+let g:closetag_close_shortcut = '<leader>>'
 
 au BufRead,BufNewFile */etc/nginx/* set ft=nginx
 au BufRead,BufNewFile */nginx/* set ft=nginx
-
-
 
 set noundofile
 set number
@@ -448,7 +461,7 @@ endif
 
 set noshellslash
 
-nmap <leader>r :Rooter<CR>
+"nmap <leader>r :Rooter<CR>
 let g:rooter_manual_only = 1
 "For Arduino IDE commandlinetool
 nmap <leader>u :ArduinoUpload<CR>
@@ -460,7 +473,14 @@ nmap <leader>3 :ArduinoSerial<CR>
 "nmap <leader>e :!python3 '%:p'<CR>
 "nmap <leader>e :set shellcmdflag=-ic <CR> :!ts python '%'<CR> <CR> :set shellcmdflag=-c<CR>
 "nmap <leader>e :!ts python '%:p' 2>/dev/null<CR> <CR>
-nmap <leader>e :!ts python '%' 2>/dev/null<CR> <CR>
+"nmap <leader>e :!ts python '%' 2>/dev/null<CR> <CR>
+
+nmap <leader>ee :!ts python '%:p' 2>/dev/null<CR> <CR>
+nmap <leader>er :!ts npm run dev<CR> <CR>
+"nmap <leader>er :!ts cargo run -j6<CR> <CR>
+nmap <leader>ew :!ts tsc '%:p' 2>/dev/null<CR> <CR>
+nmap <leader>w :!ts cargo run -j6<CR> <CR>
+
 nmap <leader>c :!ts C-c<CR> <CR>
 nmap <leader>z :cd %:p:h<cr> :pwd<cr>
 nmap <leader>Z :ProsessionDelete<cr>
