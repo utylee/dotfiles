@@ -47,4 +47,4 @@
 --exclude=dist
 --exclude=*.bundle.*
 
---options=/Users/utylee/.dotfiles/ctag-react-javascriptsr
+--options=/Users/utylee/.dotfiles/ctag-react-javascriptsrc
