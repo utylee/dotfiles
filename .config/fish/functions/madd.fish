@@ -16,7 +16,7 @@ function madd
 		    curl http://192.168.1.202:9007/add/writing/"$b"
 		    # curl http://192.168.1.202:9007/add/writing/$argv[2]
 			# curl http://utylee.duckdns.org/midea/add/writing/$argv[2]
-		if test $argv[1] -eq 1
+		else if test $argv[1] -eq 1
 		    echo http://193.168.1.202:9007/add/sounding/"$b"
 		    curl http://192.168.1.202:9007/add/sounding/"$b"
 		else if test $argv[1] -eq 2
