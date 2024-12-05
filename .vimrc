@@ -475,7 +475,9 @@ nmap <leader>3 :ArduinoSerial<CR>
 "nmap <leader>e :!ts python '%:p' 2>/dev/null<CR> <CR>
 "nmap <leader>e :!ts python '%' 2>/dev/null<CR> <CR>
 
-nmap <leader>ee :!ts python '%:p' 2>/dev/null<CR> <CR>
+" nmap <leader>ee :!ts python '%:p' 2>/dev/null<CR> <CR>
+nmap <leader>ee :!tmux send-keys -t 1 "python %:p" Enter<CR><CR>
+
 nmap <leader>er :!ts npm run dev<CR> <CR>
 "nmap <leader>er :!ts cargo run -j6<CR> <CR>
 nmap <leader>ew :!ts tsc '%:p' 2>/dev/null<CR> <CR>
