@@ -20,7 +20,7 @@ set -gx TERM xterm-256color-italic
 
 # PATH
 # mac은 xcode-select 자체 생태계가 있으므로 굳이 설정하지 않습니다
-fish_add_path /opt/homebrew/bin /usr/local/bin /Users/utylee/.go/bin /usr/local/sbin
+fish_add_path /opt/homebrew/opt/qt@5/bin /opt/homebrew/bin /usr/local/bin /Users/utylee/.go/bin /usr/local/sbin
 
 #set CLANGHOME /usr/local/clang+llvm-12.0.1-x86_64-linux-gnu-ubuntu-16.04
 #set -x PATH $CLANGHOME/bin $PATH
