@@ -1,8 +1,9 @@
 add_newline = false
 
+#[MAC](bold fg:#7fa31c)\
 format = """
 $python\
-[MAC](bold fg:#7fa31c)\
+[MAC](bold fg:#8c8f35)\
 $username\
 $directory\
 $git_branch$git_commit\
