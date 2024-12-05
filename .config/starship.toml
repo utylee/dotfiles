@@ -10,7 +10,8 @@ $git_branch$git_commit\
 $character\
 """
 [character]
-success_symbol = "[❯](bold #7fa31c)"
+# success_symbol = "[❯](bold #7fa31c)"
+success_symbol = "[❯](bold #8c8f35)"
 #error_symbol = "[✗](fg:1)"
 error_symbol = "[❯](fg:1)"
 vicmd_symbol = "[N](fg:14 bold)"
