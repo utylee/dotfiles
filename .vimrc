@@ -483,7 +483,8 @@ nmap <leader>er :!ts npm run dev<CR> <CR>
 nmap <leader>ew :!ts tsc '%:p' 2>/dev/null<CR> <CR>
 nmap <leader>w :!ts cargo run -j6<CR> <CR>
 
-nmap <leader>c :!ts C-c<CR> <CR>
+" nmap <leader>c :!ts C-c<CR> <CR>
+nmap <leader>c :!tmux send-keys -t 1 C-c<CR> <CR>
 nmap <leader>z :cd %:p:h<cr> :pwd<cr>
 nmap <leader>Z :ProsessionDelete<cr>
 
