@@ -1,0 +1,3 @@
+function ll
+	gls -lha $argv --color=auto
+end
