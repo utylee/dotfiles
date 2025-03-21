@@ -1,0 +1,78 @@
+#set-option -g default-terminal "screen-256color-italic"
+#set -g default-terminal "screen-256color-italic"
+set-option -g default-terminal "xterm-256color-italic"
+set-option -ga terminal-overrides ",xterm-256color-italic:Tc"
+#set -ga terminal-overrides '*:Ss=\E[%p1%d q:Se=\E[ q'
+#set -ga terminal-overrides ",screen*:Ss=[%p1%d q:Se=[2 q"
+
+set -sg escape-time 0
+bind '"' split-window -c '#{pane_current_path}'
+bind '%' split-window -h -c '#{pane_current_path}'
+bind v new-window -c "#{pane_current_path}"
+
+set-option -g history-limit 5000
+bind-key _ resize-pane -D 2
+bind-key + resize-pane -U 2
+bind-key j select-pane -D
+bind-key k select-pane -U
+bind-key h select-pane -L
+bind-key l select-pane -R
+
+# pane movement
+bind-key i command-prompt -p "join pane from:"  "join-pane -s '%%'"
+bind-key s command-prompt -p "send pane to:"  "join-pane -t '%%'"
+
+
+# Smart pane switching with awareness of vim splits
+#is_vim='echo "#{pane_current_command}" | grep -iqE "(^|\/)g?(view|n?vim?)(diff)?$"'
+is_vim='echo "#{pane_current_command}" | grep -iqE "(^|\/)g?(view|vim|ssh|mosh?)(diff)?$"'
+
+bind -n C-h if-shell "$is_vim" "send-keys C-h" "select-pane -L"
+bind -n C-j if-shell "$is_vim" "send-keys C-j" "select-pane -D"
+bind -n C-k if-shell "$is_vim" "send-keys C-k" "select-pane -U"
+bind -n C-l if-shell "$is_vim" "send-keys C-l" "select-pane -R"
+#bind -n C-\ if-shell "$is_vim" "send-keys C-\\" "select-pane -l"
+#unbind ^A
+#bind ^A select-pane -t :.+
+
+# 윈도우 swap 좌우
+#bind-key -n C-S-Left swap-window -t -1
+#bind-key -n C-S-Right swap-window -t +1
+bind-key < swap-window -t -1 -d
+bind-key > swap-window -t +1 -d
+#bind-key < move-window -t -1
+#bind-key > move-window -t +1
+
+set-window-option -g mode-keys vi
+
+set -g prefix C-a
+bind-key a send-prefix
+bind-key C-a last-window
+unbind-key C-b
+#bind-key C-a send-prefix
+
+
+bind | split-window -h
+bind - split-window -v
+bind u swap-pane -t 0 \; select-pane -t 0
+bind r source-file ~/.tmux.conf
+
+# set -g status-fg white
+set -g status-fg brightwhite
+# set -g status-bg "#3a4227"
+#set -g status-bg "#5d5e36"
+set -g status-bg "#61472e"
+#set -g status-bg black
+#set -g status-left ‘#[fg=green]#H’
+
+#set-window-option -g window-status-current-bg red
+#set-window-option -g window-status-current-style bg=red
+# set-window-option -g window-status-current-style bg="#57781a"
+# set-window-option -g window-status-current-style bg="#09ba85"
+#set-window-option -g window-status-current-style bg="#8c8f35"
+#set-window-option -g window-status-current-style bg="#c46f1b"
+set-window-option -g window-status-current-style bg="#b06821"
+#5f821d
+#set-option -g status-utf8 on
+#setw -g utf8 on
+set-option -g xterm-keys on
