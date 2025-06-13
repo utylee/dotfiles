@@ -1,0 +1,64 @@
+if status is-interactive
+    # Commands to run in interactive sessions can go here
+	set fish_greeting ''
+	fish_vi_key_bindings
+	# CURSOR
+    #printf '%b' '\e]12;red\a'
+    #echo -e "\033]Pl7fa31c\033\\"
+	echo -ne '\eP\e]12;#7fa31c\a'	# mac
+	eval (gdircolors -c ~/.dircolors)
+	starship init fish | source
+end
+if status is-login
+end
+
+set -Ux fish_term24bit 1
+
+set -gx EDITOR /usr/local/bin/vi
+set -gx GHQ_ROOT /Users/utylee/.ghq
+set -gx TERM xterm-256color-italic
+
+# PATH
+# mac은 xcode-select 자체 생태계가 있으므로 굳이 설정하지 않습니다
+fish_add_path /opt/homebrew/opt/node@22/bin /opt/homebrew/opt/ruby/bin /opt/homebrew/opt/qt@5/bin /opt/homebrew/bin /usr/local/bin /Users/utylee/.go/bin /usr/local/sbin
+
+#set CLANGHOME /usr/local/clang+llvm-12.0.1-x86_64-linux-gnu-ubuntu-16.04
+#set -x PATH $CLANGHOME/bin $PATH
+#set -x PATH /usr/local/go1.17.2/bin /usr/local/node-v14.18.1-linux-x64/bin /mnt/c/Windows/System32/WindowsPowrShell/v1.0/ /mnt/c/Python310/ /mnt/c/Python310/Scripts $PATH
+#set -gx CC $CLANGHOME/bin/clang
+#set -gx CXX $CLANGHOME/bin/clang++
+#set -gx LD_LIBRARY_PATH $LD_LIBRARY_PATH $CLANGHOME/lib 
+set -gx LDFLAGS "-L/opt/homebrew/opt/node@22/lib"
+set -gx CPPFLAGS "-I/opt/homebrew/opt/node@22/include"
+set -l RESOLVE_SCRIPT_API "/Library/Application Support/Blackmagic Design/DaVinci Resolve/Developer/Scripting/"
+set -gx RESOLVE_SCRIPT_LIB "/Applications/DaVinci Resolve/DaVinci Resolve.app/Contents/Libraries/Fusion/fusionscript.so"
+set -gx PYTHONPATH $PYTHONPATH $RESOLVE_SCRIPT_API/Modules/
+
+# FZF
+# fzf을 직접입력해 파일명 탐색 명내용 
+#set -gx FZF_DEFAULT_COMMAND 'fd --type file --color=always --follow --hidden --exclude .git'
+# 기본 데스크탑 앱이 사용자 폴더에 다 있어서 쓸게없이 검색할 게 많은 걸 제거했습니다
+#set -gx FZF_DEFAULT_COMMAND 'fd --type file --follow --hidden --color=always -E .git -E Library -E Applications -E Documents -E Qt -E Downloads -E shared -E Applications\ \(Parallels\) -E Music'
+set -gx FZF_DEFAULT_COMMAND 'fd --type file --follow --hidden --color=always'
+set -gx FZF_DEFAULT_OPTS "--ansi"
+#
+#set -gx FZF_CTRL_T_COMMAND "fd --type d --hidden --color=always"
+set -gx FZF_CTRL_T_COMMAND "$FZF_DEFAULT_COMMAND"
+#set -gx FZF_CTRL_F_COMMAND "fd --type d --hidden --color=always -E .git -E Library -E Applications -E Documents -E Qt -E Downloads -E shared -E Applications\ \(Parallels\) -E Music . $HOME"
+set -gx FZF_CTRL_F_COMMAND "fd --type d --hidden --color=always . $HOME"
+set -gx FZF_ALT_C_COMMAND "fd --type d --hidden --color=always"
+set -gx FZF_CTRL_R_OPTS "--reverse --height 100%"
+#set -gx FZF_CTRL_T_COMMAND "$FZF_DEFAULT_COMMAND"
+
+#set -gx FZF_DEFAULT_COMMAND "rg --files --hidden --follow --no-ignore"
+#set -gx FZF_CTRL_T_COMMAND "rg --files --hidden --follow --no-ignore"
+#set -gx FZF_CTRL_T_COMMAND "rg --files --hidden --follow --no-ignore"
+#set -gx FZF_ALT_C_COMMAND "find . -depth"
+##set -gx FZF_ALT_C_COMMAND "rg --hidden --files --null | xargs -0 dirname | uniq"
+##set -gx FZF_ALT_C_COMMAND "rg --hidden --sort-files --files --null 2> /dev/null | xargs -0 dirname | uniq"
+#
+# VENV
+set -gx WORKON_HOME $HOME/.virtualenvs
+
+#source ~/.mintty-colors-solarized/mintty-solarized-dark.sh
+
