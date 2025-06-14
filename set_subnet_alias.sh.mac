@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# 타겟 인터페이스 이름
+IFACE="en0"
+ALIAS_IP="192.168.100.2"
+NETMASK="255.255.255.0"
+
+# 최대 20초까지 en0 대기
+for i in {1..20}; do
+    if ifconfig "$IFACE" >/dev/null 2>&1; then
+        echo "[$(date)] $IFACE detected, assigning alias..." >> /tmp/setalias.log
+        ifconfig "$IFACE" alias "$ALIAS_IP" "$NETMASK"
+        exit 0
+    fi
+    sleep 1
+done
+
+echo "[$(date)] $IFACE not found after waiting." >> /tmp/setalias.err
+exit 1
