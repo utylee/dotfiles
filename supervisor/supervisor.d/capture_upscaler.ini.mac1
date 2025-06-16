@@ -1,0 +1,5 @@
+[program:capture_upscaler]
+command = /Users/utylee/.virtualenvs/misc/bin/python /Users/utylee/.virtualenvs/misc/src/capture_upscaler_mac1.py
+autostart = true
+autorestart = true
+user=utylee
