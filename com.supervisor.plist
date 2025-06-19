@@ -11,10 +11,9 @@
 	<string>com.agendaless.supervisord</string>
 	<key>ProgramArguments</key>
 	<array>
-        <string>/opt/homebrew/bin/supervisord</string>
-        <string>-n</string>
+        <string>/bin/bash</string>
         <string>-c</string>
-        <string>/opt/homebrew/etc/supervisord.conf</string>
+        <string>sleep 60 && /opt/homebrew/bin/supervisord -n -c /opt/homebrew/etc/supervisord.conf</string>
 	</array>
 	<key>RunAtLoad</key>
 	<true/>
