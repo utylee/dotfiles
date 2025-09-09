@@ -82,6 +82,6 @@
     "upload-limit-enabled": 0,
     "upload-slots-per-torrent": 14,
     "utp-enabled": true,
-    "watch-dir": "/Users/utylee/Downloads/_share_mac/91-transmission-watch",
+    "watch-dir": "/Users/utylee/Downloads/_share_mac2/91-transmission-watch",
     "watch-dir-enabled": true
 }
