@@ -1,8 +1,18 @@
 function lms --description "LM Studio CLI wrapper (cross-platform)"
     # stop → unload 별칭 유지
     set -l argv2 $argv
-    if test (count $argv2) -ge 1; and test "$argv2[1]" = "stop"
-        set argv2[1] "unload"
+    # if test (count $argv2) -ge 1; and test "$argv2[1]" = "stop"
+    #     set argv2[1] "unload"
+    # end
+
+	    # subcommand alias들
+    if test (count $argv2) -ge 1
+        switch $argv2[1]
+            case stop
+                set argv2[1] unload
+            case list
+                set argv2[1] ls
+        end
     end
 
     switch (uname)
