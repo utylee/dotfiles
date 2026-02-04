@@ -23,6 +23,12 @@
     <!-- <string>-R</string><string>127.0.0.1:2222:localhost:8817</string> -->
     <!-- <string>-R</string><string>127.0.0.1:8817:localhost:8817</string> -->
     <string>-R</string><string>0.0.0.0:8817:localhost:8817</string>
+    <!-- for ollama -->
+    <string>-R</string><string>0.0.0.0:11434:localhost:11434</string>
+    <!-- for lm studio -->
+    <string>-R</string><string>0.0.0.0:11234:localhost:11234</string>
+    <!-- for smb -->
+    <string>-R</string><string>0.0.0.0:1445:localhost:445</string>
 
     <string>utylee@192.168.1.202</string>
   </array>
