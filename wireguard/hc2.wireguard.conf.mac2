@@ -1,10 +1,21 @@
 [Interface]
-PrivateKey = 6GdbZSDTaeSTLu4XhzV4pcf0KI+RVl0EBW5ovsSgskA=
-Address = 10.0.0.3/32
-DNS = 1.1.1.1
+PrivateKey = kBzVNxq6N4ZcPyWBrD7iWWOGbc5/8zmwSApbkolOtn8=
+Address = 10.8.0.3/24
+#DNS = 192.168.1.1
 
 [Peer]
-PublicKey = kMM68KWxDTymQn1RzZKQhEILHiLySkxaZisx9BwMf0o=
-AllowedIPs = 0.0.0.0/0, ::/0
-Endpoint = utylee.duckdns.org:51820
+PublicKey = othVfnpcecCPuELZrTSnJI4FOjXREL/sVxz5TPmJeAY=
+AllowedIPs = 192.168.1.0/24, 10.8.0.0/24
+Endpoint = utylee.mywire.org:51820
 PersistentKeepalive = 25
+
+#[Interface]
+#PrivateKey = 6GdbZSDTaeSTLu4XhzV4pcf0KI+RVl0EBW5ovsSgskA=
+#Address = 10.0.0.3/32
+#DNS = 1.1.1.1
+#
+#[Peer]
+#PublicKey = kMM68KWxDTymQn1RzZKQhEILHiLySkxaZisx9BwMf0o=
+#AllowedIPs = 0.0.0.0/0, ::/0
+#Endpoint = utylee.duckdns.org:51820
+#PersistentKeepalive = 25
