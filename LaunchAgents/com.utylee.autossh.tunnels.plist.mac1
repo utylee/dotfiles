@@ -8,38 +8,22 @@
 
   <key>ProgramArguments</key>
   <array>
-    <string>/opt/homebrew/bin/autossh</string>
-    <string>-M</string><string>0</string>
-    <string>-N</string>
-    <string>-p</string><string>8822</string>
-
-    <string>-o</string><string>ServerAliveInterval=10</string>
-    <string>-o</string><string>ServerAliveCountMax=2</string>
-    <string>-o</string><string>ExitOnForwardFailure=yes</string>
-    <string>-o</string><string>ConnectTimeout=5</string>
-    <string>-o</string><string>ConnectionAttempts=1</string>
-
-    <string>-R</string><string>127.0.0.1:13300:localhost:3000</string>
-    <!-- <string>-R</string><string>127.0.0.1:2222:localhost:8817</string> -->
-    <!-- <string>-R</string><string>127.0.0.1:8817:localhost:8817</string> -->
-    <string>-R</string><string>0.0.0.0:8817:localhost:8817</string>
-    <!-- for ollama -->
-    <string>-R</string><string>0.0.0.0:11434:localhost:11434</string>
-    <!-- for lm studio -->
-    <string>-R</string><string>0.0.0.0:11234:localhost:11234</string>
-    <!-- for smb -->
-    <string>-R</string><string>0.0.0.0:1445:localhost:445</string>
-
-    <string>utylee@192.168.1.202</string>
+    <string>/Users/utylee/temp/bin/autossh-tunnels.sh</string>
   </array>
 
   <key>RunAtLoad</key>
   <true/>
+
   <key>KeepAlive</key>
   <dict>
     <key>NetworkState</key>
     <true/>
+    <key>SuccessfulExit</key>
+    <false/>
   </dict>
+
+  <key>ThrottleInterval</key>
+  <integer>3</integer>
 
   <key>StandardOutPath</key>
   <string>/tmp/autossh-tunnels.out</string>
@@ -47,3 +31,4 @@
   <string>/tmp/autossh-tunnels.err</string>
 </dict>
 </plist>
+
