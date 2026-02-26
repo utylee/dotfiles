@@ -11,6 +11,8 @@ Python 3.8+ compatible.
 """
 
 import argparse
+import logging
+from logging.handlers import RotatingFileHandler
 import json
 import os
 import re
@@ -21,6 +23,7 @@ import sys
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+import platform as py_platform
 
 
 # -------------------------
@@ -40,6 +43,15 @@ def default_models_dir() -> Path:
     # Keep fallback to ~/llm_models for portability.
     return env_path("LLS_MODELS_DIR", HOME / "temp" / "llm_models")
 
+def detect_platform_name() -> str:
+    sys = py_platform.system().lower()
+
+    if sys == "darwin":
+        return "mac"
+
+    # Linux / WSL / 기타
+    return "wsl"
+
 
 def default_llama_bin() -> Path:
     # Prefer explicit env var; fallback to ~/bin/llama-server
@@ -54,8 +66,52 @@ def default_state_dir() -> Path:
 def default_logs_dir() -> Path:
     return env_path("LLS_LOGS_DIR", default_state_dir() / "logs")
 
+
+def rotate_log(path: Path, keep: int = 5) -> None:
+    """Rotate log files so they don't grow unbounded.
+
+    Example (keep=5):
+      model.log -> model.log.1
+      model.log.1 -> model.log.2
+      ... up to .5
+
+    If `path` doesn't exist, nothing happens.
+    """
+    try:
+        if keep <= 0:
+            # user explicitly disables keeping old logs
+            if path.exists():
+                path.unlink()
+            return
+
+        if not path.exists():
+            return
+
+        oldest = path.with_name(path.name + f".{keep}")
+        if oldest.exists():
+            oldest.unlink()
+
+        for i in range(keep - 1, 0, -1):
+            src = path.with_name(path.name + f".{i}")
+            dst = path.with_name(path.name + f".{i+1}")
+            if src.exists():
+                src.rename(dst)
+
+        path.rename(path.with_name(path.name + ".1"))
+    except Exception:
+        # Never crash launcher because log rotation failed
+        return
+
+def resolve_mmproj(model_path: Path) -> Optional[Path]:
+    """If `<model>.gguf` has a sibling `<model>-mmproj.gguf`, return it."""
+    if model_path.suffix.lower() != ".gguf":
+        return None
+    mmproj = model_path.with_name(model_path.stem + "-mmproj.gguf")
+    return mmproj if mmproj.exists() else None
+
+
 def build_llama_cmd(llama_bin: Path, model_path: Path, params: dict) -> list:
-    return [
+    cmd = [
         str(llama_bin),
         "--host", str(params["host"]),
         "--port", str(params["port"]),
@@ -66,6 +122,12 @@ def build_llama_cmd(llama_bin: Path, model_path: Path, params: dict) -> list:
         "--ubatch-size", str(params["ubatch"]),
         "--n-gpu-layers", str(params["gpu_layers"]),
     ]
+
+    mmproj = resolve_mmproj(model_path)
+    if mmproj:
+        cmd += ["--mmproj", str(mmproj)]
+
+    return cmd
 
 
 def format_cmd(cmd: list) -> str:
@@ -81,7 +143,12 @@ def run_show_profile(args):
     models_dir = Path(os.environ.get("LLS_MODELS_DIR", str(home / "llm_models")))
     llama_bin  = Path(os.environ.get("LLS_LLAMA_BIN", str(home / "bin/llama-server")))
 
-    platform = args.platform or os.environ.get("LLS_PLATFORM", "wsl")
+    # platform = args.platform or os.environ.get("LLS_PLATFORM", "wsl")
+    platform = (
+        args.platform
+        or os.environ.get("LLS_PLATFORM")
+        or detect_platform_name()
+    )
     model_path = pick_model(models_dir, args.model)
 
     params = resolve_params(cfg, platform, model_path.name)
@@ -480,7 +547,12 @@ def run_show_profile(args: argparse.Namespace) -> None:
         # If models_dir isn't available in this context, fall back to the raw token
         model_name = args.model
 
-    platform = args.platform or os.environ.get("LLS_PLATFORM", "wsl")
+    # platform = args.platform or os.environ.get("LLS_PLATFORM", "wsl")
+    platform = (
+        args.platform
+        or os.environ.get("LLS_PLATFORM")
+        or detect_platform_name()
+    )
     params, dbg = resolve_params(cfg, platform, model_name)
 
     print(f"Model: {dbg['model']}")
@@ -508,7 +580,17 @@ def run_start(args: argparse.Namespace) -> None:
     models_dir = env_path("LLS_MODELS_DIR", default_models_dir())
     llama_bin = env_path("LLS_LLAMA_BIN", default_llama_bin())
 
-    platform = os.environ.get("LLS_PLATFORM", "wsl")  # mac / wsl
+    # platform = os.environ.get("LLS_PLATFORM", "wsl")  # mac / wsl
+    # platform = (
+    #     args.platform
+    #     or os.environ.get("LLS_PLATFORM")
+    #     or detect_platform_name()
+    # )
+    platform = (
+        getattr(args, "platform", None)
+        or os.environ.get("LLS_PLATFORM")
+        or detect_platform_name()
+    )
 
     model_path = pick_model(models_dir, args.model)
     params, dbg = resolve_params(cfg, platform, model_path.name)
@@ -539,6 +621,18 @@ def run_start(args: argparse.Namespace) -> None:
     statefile = _statefile_for_port(state_dir, port)
     logfile = logs_dir / f"{model_path.name}.log"
 
+    # ✅ ensure logfile exists immediately (prevents "Logfile not found" race)
+    try:
+        logfile.parent.mkdir(parents=True, exist_ok=True)
+        logfile.touch(exist_ok=True)
+    except Exception:
+        pass
+
+    # # Detach 모드에서만 로그를 파일로 저장 (무한 누적 방지: 실행마다 교체 + 최근 N개만 보관)
+    # log_keep = int(os.environ.get("LLS_LOG_KEEP", "5"))
+    # if detach:
+    #     rotate_log(logfile, keep=log_keep)
+
     # already running?
     if pidfile.exists():
         try:
@@ -555,7 +649,8 @@ def run_start(args: argparse.Namespace) -> None:
 
     print("[lls] Starting llama-server:")
     print("      " + format_cmd(cmd))
-    print(f"[lls] log file: {logfile}")
+    if detach:
+        print(f"[lls] log file: {logfile}")
 
     state = {
         "pid": None,
@@ -563,7 +658,7 @@ def run_start(args: argparse.Namespace) -> None:
         "host": host,
         "model": model_path.name,
         "model_path": str(model_path),
-        "logfile": str(logfile),
+        "logfile": str(logfile) if detach else None,
         "cmd": cmd,
         "started_at": time.strftime("%Y-%m-%d %H:%M:%S"),
         "platform": platform,
@@ -581,19 +676,97 @@ def run_start(args: argparse.Namespace) -> None:
         state["pid"] = pid
         statefile.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
         write_state(port, pid, model_path.name, format_cmd(cmd))
-
     if detach:
-        with open(logfile, "ab", buffering=0) as f:
-            p = subprocess.Popen(cmd, stdout=f, stderr=subprocess.STDOUT)
+        # Detach mode: run llama-server in background and capture logs with size-based rotation.
+        # We cannot use RotatingFileHandler directly as stdout for an external process because
+        # rotation only triggers when the handler writes. So we create a FIFO and a small
+        # background log-pump that reads the FIFO and writes through RotatingFileHandler.
+        fifo_path = _fifo_for_port(state_dir, port)
+        try:
+            fifo_path.unlink(missing_ok=True)
+        except Exception:
+            pass
+        os.mkfifo(fifo_path, 0o600)
+
+        pump_err = logfile.with_suffix(logfile.suffix + ".pump.err")
+        pump_err_fp = open(pump_err, "a", encoding="utf-8", errors="replace", buffering=1)
+
+        lp = subprocess.Popen(
+            _log_pump_cmd(fifo_path, logfile),
+            stdout=subprocess.DEVNULL,
+            stderr=pump_err_fp,               # ✅ DEVNULL 금지
+            start_new_session=True,
+            close_fds=True,
+        )
+
+        # # Start log pump first (reader), then start llama-server with stdout redirected to FIFO (writer)
+        # lp = subprocess.Popen(
+        #     _log_pump_cmd(fifo_path, logfile),
+        #     stdout=subprocess.DEVNULL,
+        #     stderr=subprocess.DEVNULL,
+        #     start_new_session=True,
+        #     close_fds=True,
+        # )
+
+        time.sleep(0.15)
+        if lp.poll() is not None:
+            _cleanup_files()
+            print(f"[lls] log pump failed to start (rc={lp.returncode}).", file=sys.stderr)
+            try:
+                print(f"[lls] pump stderr: {pump_err}", file=sys.stderr)
+            except Exception:
+                pass
+            sys.exit(lp.returncode or 1)
+
+        # # If log pump failed immediately, don't hang waiting on FIFO.
+        # if lp.poll() is not None:
+        #     _cleanup_files()
+        #     print(f"[lls] log pump failed to start (rc={lp.returncode}).", file=sys.stderr)
+        #     sys.exit(lp.returncode or 1)
+
+        # Open FIFO in RDWR non-blocking mode to avoid deadlock if the log pump fails early.
+        # (If we open write-only, it can block forever waiting for a reader.)
+        try:
+            fd = os.open(fifo_path, os.O_RDWR | os.O_NONBLOCK)
+            w = os.fdopen(fd, "wb", buffering=0)
+        except Exception:
+            try:
+                lp.terminate()
+            except Exception:
+                pass
+            _cleanup_files()
+            print(f"[lls] failed to open fifo for logging: {fifo_path}", file=sys.stderr)
+            sys.exit(1)
+
+        p = subprocess.Popen(
+            cmd,
+            stdout=w,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+            close_fds=True,
+        )
+
+        # close our reference; llama-server holds it
+        try:
+            w.close()
+        except Exception:
+            pass
 
         if p.poll() is not None:
+            try:
+                lp.terminate()
+            except Exception:
+                pass
             _cleanup_files()
             print(f"[lls] failed to start (rc={p.returncode}). See log: {logfile}", file=sys.stderr)
             sys.exit(p.returncode or 1)
 
+        state["log_pump_pid"] = lp.pid
+        state["fifo"] = str(fifo_path)
         _write_state(p.pid)
         print(f"[lls] started (pid={p.pid})")
         return
+
 
     # Foreground mode: stream logs safely, don't crash on non-utf8
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=0)
@@ -607,12 +780,10 @@ def run_start(args: argparse.Namespace) -> None:
 
     try:
         assert p.stdout is not None
-        with open(logfile, "ab", buffering=0) as f:
-            while True:
+        while True:
                 chunk = p.stdout.readline()
                 if not chunk:
                     break
-                f.write(chunk)
                 sys.stdout.write(chunk.decode("utf-8", errors="replace"))
                 sys.stdout.flush()
     except KeyboardInterrupt:
@@ -634,6 +805,155 @@ def run_start(args: argparse.Namespace) -> None:
     _cleanup_files()
     print(f"[lls] exited rc={rc}")
     sys.exit(rc)
+
+def run_log(args: argparse.Namespace) -> None:
+    """Show logs for the currently managed llama-server instance.
+
+    Note: logs are only persisted when started with -d/--detach.
+    """
+    state_dir = env_path("LLS_STATE_DIR", default_state_dir())
+    port = int(getattr(args, "port", int(os.environ.get("LLAMA_PORT", "8080"))))
+    statefile = _statefile_for_port(state_dir, port)
+    pidfile = _pidfile_for_port(state_dir, port)
+
+    if not statefile.exists():
+        # If pidfile exists but state json missing, give a more helpful message.
+        if pidfile.exists():
+            print("running (pidfile exists) but detailed state is missing:", statefile)
+            print("Tip: start via 'lls start ... -d' so state/log are written.")
+        else:
+            print("No running session (statefile missing)")
+        return
+
+    try:
+        state = json.loads(statefile.read_text(encoding="utf-8"))
+    except Exception:
+        print("Statefile corrupted:", statefile)
+        return
+
+    logfile = state.get("logfile")
+    if not logfile:
+        print("No logfile recorded in state.")
+        print("Tip: start via 'lls start ... -d' to persist logs.")
+        return
+
+    # logfile stored as string path
+    log_path = Path(str(logfile)).expanduser()
+
+    if not log_path.exists():
+        print("Logfile not found:", log_path)
+        print("Tip: logs are only written when started with -d/--detach.")
+        return
+
+    lines = int(getattr(args, "lines", 200))
+    follow = bool(getattr(args, "follow", False))
+
+    if follow:
+        subprocess.run(["tail", "-n", str(lines), "-f", str(log_path)])
+    else:
+        subprocess.run(["tail", "-n", str(lines), str(log_path)])
+
+
+
+# =========================
+# Log pump (RotatingFileHandler for external process stdout)
+# =========================
+def _fifo_for_port(state_dir: Path, port: int) -> Path:
+    return state_dir / f"llama_{port}.fifo"
+
+def _log_pump_cmd(fifo_path: Path, logfile: Path) -> list[str]:
+    # logger.info("[lls] log-pump ready")
+    return [
+        sys.executable,
+        os.path.realpath(__file__),
+        "_log_pump",
+        "--fifo", str(fifo_path),
+        "--logfile", str(logfile),
+    ]
+
+def run_log_pump(args: argparse.Namespace) -> None:
+    fifo_path = Path(args.fifo)
+    logfile = Path(args.logfile)
+
+    log_max_mb = int(os.environ.get("LLS_LOG_MAX_MB", "50"))
+    log_keep = int(os.environ.get("LLS_LOG_KEEP", "5"))
+
+    logger = logging.getLogger("lls.log_pump")
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+
+    # 중복 핸들러 방지 (같은 프로세스에서 여러 번 호출될 가능성 대비)
+    if not logger.handlers:
+        handler = RotatingFileHandler(
+            logfile,
+            maxBytes=log_max_mb * 1024 * 1024,
+            backupCount=log_keep,
+            encoding="utf-8",
+        )
+        handler.setFormatter(logging.Formatter("[%(asctime)s] %(message)s", "%H:%M:%S"))
+        logger.addHandler(handler)
+
+    # ✅ 파일 생성 + pump 생존 표시 (중요)
+    logger.info("[lls] log-pump ready")
+
+    # FIFO에서 줄 단위로 읽어서 로깅 (실시간 rotate는 handler가 담당)
+    with open(fifo_path, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            line = line.rstrip("\n")
+            if line:
+                logger.info(line)
+
+# def run_log_pump(args: argparse.Namespace) -> None:
+#     """Internal: read bytes from FIFO and write to a RotatingFileHandler logfile.
+
+#     This exists because RotatingFileHandler only rotates when *it* writes.
+#     If we simply pass an open file handle to llama-server, rotation will never trigger.
+#     """
+#     fifo_path = Path(args.fifo).expanduser()
+#     logfile = Path(args.logfile).expanduser()
+
+#     max_mb = int(os.environ.get("LLS_LOG_MAX_MB", "50"))
+#     keep = int(os.environ.get("LLS_LOG_KEEP", "5"))
+
+#     logger = logging.getLogger(f"lls.logpump.{logfile.name}")
+#     logger.setLevel(logging.INFO)
+#     logger.propagate = False
+#     handler = RotatingFileHandler(
+#         logfile,
+#         maxBytes=max_mb * 1024 * 1024,
+#         backupCount=keep,
+#         encoding="utf-8",
+#     )
+#     # Write raw lines as-is; avoid double timestamps (llama-server already timestamps sometimes)
+#     handler.setFormatter(logging.Formatter("%(message)s"))
+#     logger.addHandler(handler)
+
+#     # Blocking open/read loop
+#     try:
+#         with open(fifo_path, "rb", buffering=0) as r:
+#             while True:
+#                 chunk = r.readline()
+#                 if not chunk:
+#                     break
+#                 line = chunk.decode("utf-8", errors="replace").rstrip("\n")
+#                 logger.info(line)
+#     finally:
+#         try:
+#             handler.flush()
+#             handler.close()
+#         except Exception:
+#             pass
+#         for h in list(logger.handlers):
+#             try:
+#                 logger.removeHandler(h)
+#             except Exception:
+#                 pass
+#         # Best-effort cleanup of FIFO (stop may also remove it)
+#         try:
+#             fifo_path.unlink(missing_ok=True)
+#         except Exception:
+#             pass
+
 
 def main() -> None:
     ap = argparse.ArgumentParser(prog="lls")
@@ -669,6 +989,18 @@ def main() -> None:
     sp = sub.add_parser("info", help="show current running model/port/log/cmd")
     sp.add_argument("--port", type=int, default=int(os.environ.get("LLAMA_PORT", "8080")))
     sp.set_defaults(func=run_info)
+
+    sp = sub.add_parser("log", help="show logs for current session")
+    sp.add_argument("--port", type=int, default=int(os.environ.get("LLAMA_PORT", "8080")))
+    sp.add_argument("-f", "--follow", action="store_true", help="follow (tail -f)")
+    sp.add_argument("-n", "--lines", type=int, default=200, help="number of lines")
+    sp.set_defaults(func=run_log)
+
+    # --- internal: log pump (hidden) ---
+    sp = sub.add_parser("_log_pump", help=argparse.SUPPRESS)
+    sp.add_argument("--fifo", required=True)
+    sp.add_argument("--logfile", required=True)
+    sp.set_defaults(func=run_log_pump)
 
 
 

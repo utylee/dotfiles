@@ -12,7 +12,7 @@
 
     // llama-server: --batch-size / --ubatch-size
     "batch": 2048,
-    "ubatch": 512,
+    "ubatch": 256,
 
     // mac metal: -1 / nvidia cuda: 적당히
     // llama-server: --n-gpu-layers
@@ -61,18 +61,73 @@
   // 모델 파일명(부분매칭/정규식 느낌) -> 적용할 프로필/직접 override
   "model_rules": [
     {
+      "name": "qwen3-vl-30b-a3b-iqnl",
+      "match": "qwen3.*vl.*a3b.*iq4",
+      "override": { "ctx": 40960,
+            "extra_args": 
+                [
+                    "--no-mmap",
+                    "--chat-template-kwargs",
+                    "{\"enable_thinking\": false}" 
+                ]
+      }
+    },
+    {
+      "name": "qwen3.5-35b-a3b-ud-q3",
+      "match": "qwen.*35b.*a3b.*ud.*q3",
+      "override": { "ctx": 32768,
+            "extra_args": 
+                [
+                    "--no-mmap",
+                    "--chat-template-kwargs",
+                    "{\"enable_thinking\": false}" 
+                ]
+      }
+    },
+    {
+      "name": "qwen3-coder-next-ud-tq1",
+      "match": "qwen3.*coder.*next.*ud.*tq",
+      "override": { "ctx": 20480,
+            "extra_args": 
+                [
+                    "--no-mmap",
+                    "--chat-template-kwargs",
+                    "{\"enable_thinking\": false}" 
+                ]
+      }
+    },
+    {
+      "name": "qwen3-vl-30b-a3b-ud-q3",
+      "match": "qwen3.*vl.*a3b.*ud.*q3",
+      "override": { "ctx": 20480,
+            "extra_args": 
+                [
+                    "--no-mmap",
+                    "--chat-template-kwargs",
+                    "{\"enable_thinking\": false}" 
+                ]
+      }
+    },
+    {
+      "match": "glm.*flash",
+      "override": {
+        "extra_args": 
+            [
+                "--no-mmap",
+                "--chat-template-kwargs",
+                "{\"enable_thinking\": false}" 
+            ]
+      }
+    },
+    {
       "match": "phi",
-      "use_profiles": ["safe"],
+      "use_profiles": ["safe"]
       // "override": { "ctx": 4096 }
     },
     {
       "match": "gpt-oss-20b",
       "use_profiles": ["safe"],
       "override": { "batch": 512, "ubatch": 128 }
-    },
-    {
-      "match": "qwen",
-      "use_profiles": ["defaults"]
     },
     {
       "match": "lfm",
