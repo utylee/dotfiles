@@ -1,0 +1,47 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  "provider": {
+    "llamacpp": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "llama.cpp (local)",
+      "options": {
+        "baseURL": "http://llm.utylee.mywire.org/v1/",
+        "apiKey": "not-needed"
+      },
+      "models": {
+        "qwen35": {
+          "name": "Qwen3.5-35b-a3b.gguf"
+        }
+      }
+    },
+    "llamacpp-ccy": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "llama.cpp (ccy)",
+      "options": {
+        "baseURL": "http://llc.utylee.mywire.org/v1/",
+        "apiKey": "not-needed"
+      },
+      "models": {
+        "qwen35": {
+          "name": "Qwen3-VL-8b.gguf"
+        }
+      }
+    },
+    "llamacpp-llm2": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "llama.cpp (llm2)",
+      "options": {
+        "baseURL": "http://llm2.utylee.mywire.org/v1/",
+        "apiKey": "not-needed"
+      },
+      "models": {
+        "qwen35": {
+          "name": "gemma-3n.gguf"
+        }
+      }
+    }
+  },
+
+  "model": "llamacpp/qwen35"
+}
