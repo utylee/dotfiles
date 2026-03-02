@@ -5,7 +5,7 @@ if status is-interactive
 	# CURSOR
     #printf '%b' '\e]12;red\a'
     #echo -e "\033]Pl7fa31c\033\\"
-	echo -ne '\eP\e]12;#7fa31c\a'	# mac
+    #echo -ne '\eP\e]12;#7fa31c\a'	# mac
 	eval (gdircolors -c ~/.dircolors)
 	starship init fish | source
 end
@@ -13,14 +13,23 @@ if status is-login
 end
 
 set -Ux fish_term24bit 1
+set -Ux GOPATH $HOME/.go 
 
 set -gx EDITOR /usr/local/bin/vi
 set -gx GHQ_ROOT /Users/utylee/.ghq
 set -gx TERM xterm-256color-italic
+set -gx TERM xterm-256color-italic
+
+set -x LANG ko_KR.UTF-8
+set -x LC_ALL ko_KR.UTF-8
+
+set -gx LLS_MODELS_DIR /Users/utylee/temp/llm_models
+set -gx LLS_LLAMA_BIN  /Users/utylee/temp/llama.cpp/build/bin/llama-server
+
 
 # PATH
 # mac은 xcode-select 자체 생태계가 있으므로 굳이 설정하지 않습니다
-fish_add_path /opt/homebrew/opt/qt@5/bin /opt/homebrew/bin /usr/local/bin /Users/utylee/.go/bin /usr/local/sbin
+fish_add_path /Users/utylee/temp/opencode/packages/opencode/dist/opencode-darwin-arm64/bin $GOPATH/bin /Users/utylee/temp/bin /Users/utylee/temp/llama.cpp/build/bin  /opt/homebrew/opt/ruby/bin /opt/homebrew/opt/qt@5/bin /opt/homebrew/bin /usr/local/bin /Users/utylee/.go/bin /usr/local/sbin
 
 #set CLANGHOME /usr/local/clang+llvm-12.0.1-x86_64-linux-gnu-ubuntu-16.04
 #set -x PATH $CLANGHOME/bin $PATH
@@ -28,6 +37,12 @@ fish_add_path /opt/homebrew/opt/qt@5/bin /opt/homebrew/bin /usr/local/bin /Users
 #set -gx CC $CLANGHOME/bin/clang
 #set -gx CXX $CLANGHOME/bin/clang++
 #set -gx LD_LIBRARY_PATH $LD_LIBRARY_PATH $CLANGHOME/lib 
+# set -gx LDFLAGS "-L/opt/homebrew/opt/node@22/lib"
+# set -gx CPPFLAGS "-I/opt/homebrew/opt/node@22/include"
+set -l RESOLVE_SCRIPT_API "/Library/Application Support/Blackmagic Design/DaVinci Resolve/Developer/Scripting"
+set -gx RESOLVE_SCRIPT_LIB "/Applications/DaVinci Resolve/DaVinci Resolve.app/Contents/Libraries/Fusion/fusionscript.so"
+set -gx PYTHONPATH $RESOLVE_SCRIPT_API/Modules/
+# set -gx PYTHONPATH $PYTHONPATH $RESOLVE_SCRIPT_API/Modules/
 
 # FZF
 # fzf을 직접입력해 파일명 탐색 명내용 
@@ -57,3 +72,15 @@ set -gx WORKON_HOME $HOME/.virtualenvs
 
 #source ~/.mintty-colors-solarized/mintty-solarized-dark.sh
 
+
+# Added by LM Studio CLI (lms)
+set -gx PATH $PATH /Users/utylee/.lmstudio/bin
+# End of LM Studio CLI section
+
+
+# # opencode
+# fish_add_path /Users/utylee/.opencode/bin
+
+# bun
+set --export BUN_INSTALL "$HOME/.bun"
+set --export PATH $BUN_INSTALL/bin $PATH
