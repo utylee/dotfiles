@@ -5,7 +5,8 @@ if status is-interactive
 	# CURSOR
     #printf '%b' '\e]12;red\a'
     #echo -e "\033]Pl7fa31c\033\\"
-    #echo -ne '\eP\e]12;#7fa31c\a'	# mac
+    echo -ne '\eP\e]12;#7fa31c\a'	# mac
+    #echo -ne '\eP\e]12;#8c8f35\a'	# mac
 	eval (gdircolors -c ~/.dircolors)
 	starship init fish | source
 end
