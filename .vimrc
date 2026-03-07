@@ -8,6 +8,7 @@ if &shell =~# 'fish$'
 endif
 set iskeyword+=-
 
+set notitle
 set timeoutlen=1000 ttimeoutlen=10
 
 " ctrlp가 ag를 사용하게 합니다
@@ -22,7 +23,7 @@ set grepprg=ag\ --nogroup\ --nocolor
 let g:simple_todo_map_normal_mode_keys = 0
 set rtp+=~/.fzf
 let g:fzf_history_dir = '~/.fzf/fzf-history'
-let g:fzf_layout = { 'down': '40%' }
+" let g:fzf_layout = { 'down': '40%' }
 let g:fzf_preview_window = []
 command! -bang -nargs=* Ag call fzf#vim#ag(<q-args>, '--hidden', <bang>0)
 
@@ -71,6 +72,8 @@ else
   inoremap <silent><expr> <c-@> coc#refresh()
 endif
 
+
+
 " Make <CR> auto-select the first completion item and notify coc.nvim to
 " format on enter, <cr> could be remapped by other vim plugin
 inoremap <silent><expr> <cr> pumvisible() ? coc#_select_confirm()
@@ -108,8 +111,23 @@ nmap ,d <Plug>(coc-codeaction)
 
 "coc-prettier settings
 command! -nargs=0 Prettier :CocCommand prettier.formatFile
-vmap ;f  <Plug>(coc-format-selected)
-nmap ;f  <Plug>(coc-format-selected)
+" vmap ;f  <Plug>(coc-format-selected)
+" nmap ;f  <Plug>(coc-format-selected)
+
+" Add `:Format` command to format current buffer.
+command! -nargs=0 Format :call CocActionAsync('format')
+
+" Add `:Fold` command to fold current buffer.
+command! -nargs=? Fold :call     CocAction('fold', <f-args>)
+
+" Add `:OR` command for organize imports of the current buffer.
+command! -nargs=0 OR   :call     CocActionAsync('runCommand', 'editor.action.organizeImport')
+
+nmap ;f  :Prettier<CR>
+nmap ;g  :Format<CR>
+
+" nnoremap ;f <Cmd>Prettier<CR>
+" nnoremap ;g <Cmd>Format<CR>
 
 
 "set t_SI=[6\ q
