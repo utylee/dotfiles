@@ -51,6 +51,10 @@ let g:terminal_ansi_colors = [
 
 " coc setups  ---------------------------------------------------------
 
+" coc-settings 파일을 jsonc 형식으로 읽게합니다. coc.nvim 내부적으로 jsonc지원
+autocmd BufEnter coc-settings.json setlocal ft=jsonc
+
+
 " Use tab for trigger completion with characters ahead and navigate.
 " NOTE: Use command ':verbose imap <tab>' to make sure tab is not mapped by
 " other plugin before putting this into your config.
