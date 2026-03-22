@@ -6,6 +6,7 @@ $python\
 $username\
 $directory\
 $git_branch$git_commit\
+$package$nodejs$rust$python
 $character\
 """
 [character]
@@ -81,7 +82,7 @@ format = " [$path](fg:6)[$read_only]($read_only_style)"  #cyan
 #format = "[ $symbol$branch ](fg:#222222 bg:#8f3928)"
 #format = "[ $symbol$branch ](fg:#222222 bg:#9c341f)"
 #format = "[ $symbol$branch ](bold fg:black bg:#cb4b16)"
-format = "[ $symbol$branch ](fg:8 bg:9)"					#brblack:orange 
+format = "[ $symbol$branch ](fg:8 bg:3)"					#brblack:orange 
 only_attached = true
 symbol = " "
 #9c341f

@@ -80,7 +80,7 @@ size = 21
 # normal = { family = "CaskaydiaMono Nerd Font Mono", style = "Regular" }
 normal = { family = "CaskaydiaMono Nerd Font Mono", style = "SemiLight" }
 # normal = { family = "CaskaydiaMono Nerd Font Mono", style = "Light" }
-# normal = { family = "CaskaydiaMono Nerf Font Mono", style="SemiLight"}
+# normal = { family = "CaskaydiaMono Nerd Font Mono", style="SemiLight"}
 # normal = { family = "CaskaydiaMono NFM", style="Regular"}
 # normal = { family = "Noto Sans Mono", style="DemiLight"}
 # normal = { family = "D2Coding", style="Regular"}
@@ -94,6 +94,7 @@ normal = { family = "CaskaydiaMono Nerd Font Mono", style = "SemiLight" }
 # bold = { family = "CaskaydiaMono NFM", style = "Regular" }
 # bold = { family = "CaskaydiaMono NFM", style = "SemiBold" }
 bold = { family = "CaskaydiaMono Nerd Font Mono", style = "Regular" }
+# bold = { family = "CaskaydiaMono Nerd Font Mono", style = "SemiLight" }
 # bold = { family = "CaskaydiaMono NFM", style = "Bold" }
 # bold = { family = "CaskaydiaMono NFM", style = "Black" }
 # italic = { family = "CaskaydiaMono Nerd Font Mono", style = "SemiLight Italic" }
