@@ -104,6 +104,7 @@ return {
     -- { family = "Cascadia Mono NF", weight = "Light" },
     -- { family = "CaskaydiaCove Nerd Font Mono", weight = "DemiLight" },
     -- { family = "CaskaydiaCove Nerd Font Mono Light", weight = "SemiLight" },
+    -- { family = "CaskaydiaCove Nerd Font Mono Light", weight = "Light" },
     -- { family = "CaskaydiaCove Nerd Font Mono", weight="DemiLight"},
     { family = "Hack Nerd Font Mono", weight="Regular"},
     -- { family = "CaskaydiaCove Nerd Font Mono", weight="Regular"},
@@ -186,7 +187,7 @@ return {
   -- color_scheme = "Solarized Dark (Gogh)",
   -- color_scheme = "Solarized Dark",
   -- color_scheme = "Selenized Dark",
-  front_end = "WebGpu",
+  -- front_end = "WebGpu",
   enable_tab_bar = false,
 
 }

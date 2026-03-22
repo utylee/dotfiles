@@ -66,6 +66,9 @@ history = 10000
 save_to_clipboard = true
 
 [font]
+## font thicker problem 
+#defaults -currentHost write -g AppleFontSmoothing -int 0
+
 builtin_box_drawing = true
 # draw_bold_text_with_bright_colors = false
 # size = 19
