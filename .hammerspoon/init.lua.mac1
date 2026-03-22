@@ -4,8 +4,10 @@ local function app(name)
   end
 end
 
-hs.hotkey.bind({"cmd"}, "1", app("WezTerm"))
-hs.hotkey.bind({"cmd"}, "2", app("iTerm"))
+-- hs.hotkey.bind({"cmd"}, "1", app("WezTerm"))
+hs.hotkey.bind({"cmd"}, "1", app("Alacritty"))
+hs.hotkey.bind({"cmd"}, "2", app("WezTerm"))
+-- hs.hotkey.bind({"cmd"}, "2", app("iTerm"))
 hs.hotkey.bind({"cmd"}, "3", app("Firefox"))
 hs.hotkey.bind({"cmd"}, "4", app("Finder"))
 
