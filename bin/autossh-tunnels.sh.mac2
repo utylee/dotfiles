@@ -20,7 +20,9 @@ OPTS=(
   -o "ConnectionAttempts=1"
 
   -R "0.0.0.0:8818:localhost:8818"
-  -R "0.0.0.0:1446:localhost:445"      # smb
+  -R "0.0.0.0:8088:localhost:8080"     # llama.cpp
+  -R "0.0.0.0:1446:127.0.0.1:445"      # smb
+  -R "0.0.0.0:21118:localhost:21118"    # Rustdesk
 )
 
 LOG_DIR="$HOME/logs"
