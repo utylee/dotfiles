@@ -1,6 +1,6 @@
 [window]
 # opacity = 0.99
-# startup_mode = "Fullscreen"
+startup_mode = "Fullscreen"
 # dimensions = { columns = 92, lines = 38 }
 dimensions = { columns = 95, lines = 38 }
 position = { x = 400, y = 1 }
@@ -68,7 +68,8 @@ save_to_clipboard = true
 [font]
 builtin_box_drawing = true
 # draw_bold_text_with_bright_colors = false
-size = 19
+# size = 19
+size = 21
 # normal = { family = "Cascadia Mono NF", style="SemiLight"}
 # normal = { family = ["CaskaydiaMono Nerd Font Mono", "Noto Sans KR"], style="SemiLight"}
 # normal = { family = "CaskaydiaMono Nerd Font Mono", style="SemiLight"}
@@ -98,7 +99,7 @@ bold = { family = "CaskaydiaMono Nerd Font Mono", style = "Regular" }
 # italic = { family = "CaskaydiaMono Nerd Font Mono", style = "SemiLight Italic" }
 # italic = { family = "CaskaydiaMono NFM", style = "SemiLight Italic" }
 # italic = { family = "CaskaydiaMono NFM", style = "Italic" }
-italic = { family = "CaskaydiaMono Nerd Font Mono", style = "Light Italic" }
+italic = { family = "CaskaydiaMono Nerd Font Mono", style = "SemiLight Italic" }
 # italic = { family = "CaskaydiaMono NFM", style = "Regular" }
 # italic = { family = "CaskaydiaMono Nerd Font Mono", style = "SemiLight Italic" }
 
