@@ -7,6 +7,7 @@ $python\
 $username\
 $directory\
 $git_branch$git_commit\
+$package$nodejs$rust
 $character\
 """
 [character]
@@ -67,8 +68,8 @@ truncate_to_repo = false
 truncation_symbol = "…/"
 home_symbol = "~"
 #format = " [$path]($style)[$read_only]($read_only_style)"
-#format = " [$path](fg:6)[$read_only]($read_only_style)"  #cyan
-format = " [$path](fg:2)[$read_only]($read_only_style)"  #green
+format = " [$path](fg:6)[$read_only]($read_only_style)"  #cyan
+# format = " [$path](fg:2)[$read_only]($read_only_style)"  #green
 
 [git_branch]
 #format = "[ $symbol$branch ](fg:#222222 bg:#8ab028)"
