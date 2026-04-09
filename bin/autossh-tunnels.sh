@@ -21,10 +21,12 @@ OPTS=(
 
   -R "127.0.0.1:13300:localhost:3000"
   -R "0.0.0.0:8817:localhost:8817"
+  -R "0.0.0.0:8187:localhost:8188"      #comfyui
   -R "0.0.0.0:11434:localhost:11434"   # ollama
   -R "0.0.0.0:11234:localhost:11234"   # lm studio
   -R "0.0.0.0:8087:localhost:8080"     # llama.cpp
   -R "0.0.0.0:1445:localhost:445"      # smb
+  -R "0.0.0.0:21117:localhost:21118"    # Rustdesk
 )
 
 LOG_DIR="$HOME/logs"
