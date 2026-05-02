@@ -12,13 +12,18 @@ mkdir -p /Users/utylee/Volumes/_share_mac
 mount_smbfs //utylee:sksmsqnwk11@192.168.1.202/_share_mac /Users/utylee/Volumes/_share_mac
 
 mkdir -p /Users/utylee/Volumes/4001
-mount_smbfs //utylee:sksmsqnwk11@192.168.1.202/4001 /Users/utylee/Volumes/4001
+mount_smbfs //utylee:sksmsqnwk11@192.168.1.122/4001 /Users/utylee/Volumes/4001
 
 mkdir -p /Users/utylee/Volumes/8001
-mount_smbfs //utylee:sksmsqnwk11@192.168.1.202/8001 /Users/utylee/Volumes/8001
+mount_smbfs //utylee:sksmsqnwk11@192.168.1.122/8001 /Users/utylee/Volumes/8001
 
 mkdir -p /Users/utylee/Volumes/4003
 mount_smbfs //utylee:sksmsqnwk11@192.168.1.204/4003 /Users/utylee/Volumes/4003
 
 mkdir -p /Users/utylee/Volumes/5003
 mount_smbfs //utylee:sksmsqnwk11@192.168.1.204/5003 /Users/utylee/Volumes/5003
+
+mount_smbfs //utylee:sksmsqnwk11@192.168.1.121/ccy /Users/utylee/Volumes/ccy
+mount_smbfs //utylee:sksmsqnwk11@192.168.1.122/m5 /Users/utylee/Volumes/m5
+mount_smbfs //utylee:sksmsqnwk11@192.168.1.122/4002 /Users/utylee/Volumes/4002
+mount_smbfs //utylee:sksmsqnwk11@192.168.1.122/3002 /Users/utylee/Volumes/3002
