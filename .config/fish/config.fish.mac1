@@ -27,10 +27,12 @@ set -x LC_ALL ko_KR.UTF-8
 set -gx LLS_MODELS_DIR /Users/utylee/temp/llm_models
 set -gx LLS_LLAMA_BIN  /Users/utylee/temp/llama.cpp/build/bin/llama-server
 
+set -x MAGICK_HOME /opt/homebrew/opt/imagemagick
+set -x DYLD_LIBRARY_PATH /opt/homebrew/opt/imagemagick/lib /opt/homebrew/opt/freetype/lib $DYLD_LIBRARY_PATH
 
 # PATH
 # mac은 xcode-select 자체 생태계가 있으므로 굳이 설정하지 않습니다
-fish_add_path /Users/utylee/temp/opencode/packages/opencode/dist/opencode-darwin-arm64/bin $GOPATH/bin /Users/utylee/temp/bin /Users/utylee/temp/llama.cpp/build/bin  /opt/homebrew/opt/ruby/bin /opt/homebrew/opt/qt@5/bin /opt/homebrew/bin /usr/local/bin /Users/utylee/.go/bin /usr/local/sbin
+fish_add_path $HOME/.local/bin /opt/homebrew/opt/imagemagick/bin /Users/utylee/temp/opencode/packages/opencode/dist/opencode-darwin-arm64/bin $GOPATH/bin /Users/utylee/temp/bin /Users/utylee/temp/llama.cpp/build/bin  /opt/homebrew/opt/ruby/bin /opt/homebrew/opt/qt@5/bin /opt/homebrew/bin /usr/local/bin /Users/utylee/.go/bin /usr/local/sbin
 
 #set CLANGHOME /usr/local/clang+llvm-12.0.1-x86_64-linux-gnu-ubuntu-16.04
 #set -x PATH $CLANGHOME/bin $PATH
