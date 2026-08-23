@@ -53,8 +53,8 @@ wait_network() {
   done
 }
 
-# 터널이 '살아있는 척' 하며 멈춘 상태 감지용 헬스체크
-# - SSH 자체가 안 되면 autossh를 강제 재시작시키는 트리거로 사용
+# 실제 reverse tunnel(8817)이 HC1에 올라와 있는지 확인
+# - HC1 SSH 접속 자체만 확인하면 reverse tunnel이 죽어도 정상으로 오인할 수 있음
 health_check() {
   /usr/bin/ssh \
     -p "$SSH_PORT" \
@@ -63,7 +63,29 @@ health_check() {
     -o "ConnectionAttempts=1" \
     -o "ServerAliveInterval=5" \
     -o "ServerAliveCountMax=1" \
-    "$SSH_HOST" "true" >/dev/null 2>&1
+    "$SSH_HOST" \
+    "ss -lnt | grep -q ':8817 '" \
+    >/dev/null 2>&1
+}
+
+# autossh를 정상 종료시키고, 그래도 남아 있으면 강제 종료
+restart_autossh() {
+  local pid="$1"
+
+  log "stopping autossh pid=$pid"
+  kill "$pid" 2>/dev/null || true
+
+  for i in {1..5}; do
+    if ! kill -0 "$pid" 2>/dev/null; then
+      wait "$pid" 2>/dev/null || true
+      return 0
+    fi
+    sleep 1
+  done
+
+  log "autossh still alive -> SIGKILL pid=$pid"
+  kill -9 "$pid" 2>/dev/null || true
+  wait "$pid" 2>/dev/null || true
 }
 
 main_loop() {
@@ -81,8 +103,7 @@ main_loop() {
       # 네트워크가 끊기면 프로세스는 살아도 세션이 꼬일 수 있어서 적극적으로 재시작
       if ! /usr/sbin/scutil -r "1.1.1.1" 2>/dev/null | /usr/bin/grep -q "Reachable"; then
         log "network lost → kill autossh"
-        kill "$PID" 2>/dev/null || true
-        wait "$PID" 2>/dev/null || true
+        restart_autossh "$PID"
         break
       fi
 
@@ -93,8 +114,7 @@ main_loop() {
         log "health_check failed ($fail/3)"
         if [ "$fail" -ge 3 ]; then
           log "health_check failed 3 times → restart autossh"
-          kill "$PID" 2>/dev/null || true
-          wait "$PID" 2>/dev/null || true
+          restart_autossh "$PID"
           break
         fi
       fi
