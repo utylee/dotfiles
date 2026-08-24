@@ -59,7 +59,25 @@ health_check() {
     -o "ConnectionAttempts=1" \
     -o "ServerAliveInterval=5" \
     -o "ServerAliveCountMax=1" \
-    "$SSH_HOST" "true" >/dev/null 2>&1
+    "$SSH_HOST" \
+    "ss -lnt | grep -q ':8818 '" \
+    >/dev/null 2>&1
+}
+
+restart_autossh() {
+  local pid="$1"
+
+  log "stopping autossh pid=$pid"
+  kill "$pid" 2>/dev/null || true
+
+  for i in {1..5}; do
+    kill -0 "$pid" 2>/dev/null || return 0
+    sleep 1
+  done
+
+  log "autossh still alive → SIGKILL"
+  kill -9 "$pid" 2>/dev/null || true
+  wait "$pid" 2>/dev/null || true
 }
 
 main_loop() {
@@ -77,8 +95,7 @@ main_loop() {
       # 네트워크가 끊기면 프로세스는 살아도 세션이 꼬일 수 있어서 적극적으로 재시작
       if ! /usr/sbin/scutil -r "1.1.1.1" 2>/dev/null | /usr/bin/grep -q "Reachable"; then
         log "network lost → kill autossh"
-        kill "$PID" 2>/dev/null || true
-        wait "$PID" 2>/dev/null || true
+        restart_autossh "$PID"
         break
       fi
 
@@ -89,8 +106,7 @@ main_loop() {
         log "health_check failed ($fail/3)"
         if [ "$fail" -ge 3 ]; then
           log "health_check failed 3 times → restart autossh"
-          kill "$PID" 2>/dev/null || true
-          wait "$PID" 2>/dev/null || true
+          restart_autossh "$PID"
           break
         fi
       fi
