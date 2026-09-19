@@ -9,7 +9,7 @@
     <array>
         <string>/usr/sbin/sysctl</string>
         <string>-w</string>
-        <string>iogpu.wired_limit_mb=20456</string>
+        <string>iogpu.wired_limit_mb=21504</string>
     </array>
 
     <key>RunAtLoad</key>
