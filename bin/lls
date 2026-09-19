@@ -1,1013 +1,1635 @@
 #!/usr/bin/env python3
 """
-lls: tiny llama-server launcher (Ollama-ish UX)
+lls.py
 
-- Reads ~/.config/lls/config.jsonc (JSONC: // and /* */ comments allowed)
-- Resolves params = defaults + platform profile + model_rule profiles + model_rule override
-- start: launches llama-server, streams logs to screen + file (unless --detach)
-- stop/status/list/show-profile: helpers for tmux/fzf workflows
+A model launcher/manager for local llama.cpp, MLX-VLM, and oMLX server backends.
 
-Python 3.8+ compatible.
+New model layout:
+  $LLS_MODELS_DIR/<publisher>/<model>/
+
+Recommended contents per model dir:
+  metadata.json / metadata.jsonc
+
+llama.cpp:
+  one or more *.gguf model files
+  optional mmproj*.gguf
+  optional MTP/mtp-*.gguf
+
+MLX-VLM:
+  model directory (for example 4-bit/)
+  optional draft/MTP directory (for example mtp/)
+
+oMLX:
+  MLX-format model directory
+  lls exposes only the selected model to oMLX through a per-model symlink staging root
+
+Metadata philosophy:
+- Model-local metadata stores recommended defaults for that model.
+- ~/.config/lls/config.jsonc stores machine/user overrides.
+- Final precedence:
+    builtin defaults
+    -> model metadata defaults
+    -> config defaults
+    -> profiles from matching rules
+    -> direct rule override
+    -> CLI overrides
+
+This script is intentionally self-contained and forgiving with JSONC.
 """
 
+from __future__ import annotations
+
 import argparse
-import logging
-from logging.handlers import RotatingFileHandler
 import json
 import os
 import re
-import socket
+import shlex
 import signal
 import subprocess
 import sys
 import time
+from copy import deepcopy
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
-import platform as py_platform
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 
-# -------------------------
-# Paths / env
-# -------------------------
-HOME = Path.home()
-DEFAULT_CONFIG_PATH = HOME / ".config" / "lls" / "config.jsonc"
+BUILTIN_DEFAULTS: Dict[str, Any] = {
+    "backend": "llama-server",
+    "host": "0.0.0.0",
+    "port": 8080,
+    "ctx": 8192,
+    "threads": 8,
+    "batch": 2048,
+    "ubatch": 512,
+    "gpu_layers": -1,
+    "extra_args": [],
+}
+
+STATE_DIR = Path.home() / ".local/state/lls"
+LOG_DIR = STATE_DIR / "log"
+RUN_DIR = STATE_DIR / "run"
+ACTIVE_FILE = STATE_DIR / "active.json"
+DEFAULT_CONFIG = Path.home() / ".config/lls/config.jsonc"
+METADATA_FILES = ("metadata.json", "metadata.jsonc")
+DEFAULT_LOG_ROTATIONS = 5
 
 
-def env_path(name: str, default: Path) -> Path:
-    v = os.environ.get(name, "")
-    return Path(v) if v else default
+# -----------------------------
+# JSONC / config helpers
+# -----------------------------
+
+def strip_jsonc_comments(text: str) -> str:
+    out: List[str] = []
+    i = 0
+    in_str = False
+    escape = False
+    while i < len(text):
+        ch = text[i]
+        nxt = text[i + 1] if i + 1 < len(text) else ""
+        if in_str:
+            out.append(ch)
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_str = False
+            i += 1
+            continue
+        if ch == '"':
+            in_str = True
+            out.append(ch)
+            i += 1
+            continue
+        if ch == "/" and nxt == "/":
+            while i < len(text) and text[i] != "\n":
+                i += 1
+            continue
+        if ch == "/" and nxt == "*":
+            i += 2
+            while i + 1 < len(text) and not (text[i] == "*" and text[i + 1] == "/"):
+                i += 1
+            i += 2
+            continue
+        out.append(ch)
+        i += 1
+    return "".join(out)
 
 
-def default_models_dir() -> Path:
-    # You told me your real path is ~/temp/llm_models on WSL2.
-    # Keep fallback to ~/llm_models for portability.
-    return env_path("LLS_MODELS_DIR", HOME / "temp" / "llm_models")
-
-def detect_platform_name() -> str:
-    sys = py_platform.system().lower()
-
-    if sys == "darwin":
-        return "mac"
-
-    # Linux / WSL / 기타
-    return "wsl"
-
-
-def default_llama_bin() -> Path:
-    # Prefer explicit env var; fallback to ~/bin/llama-server
-    # return env_path("LLS_LLAMA_BIN", HOME / "bin" / "llama-server")
-    return env_path("LLS_LLAMA_BIN", "llama-server")
-
-
-def default_state_dir() -> Path:
-    return env_path("LLS_STATE_DIR", HOME / ".local" / "state" / "lls")
-
-
-def default_logs_dir() -> Path:
-    return env_path("LLS_LOGS_DIR", default_state_dir() / "logs")
-
-
-def rotate_log(path: Path, keep: int = 5) -> None:
-    """Rotate log files so they don't grow unbounded.
-
-    Example (keep=5):
-      model.log -> model.log.1
-      model.log.1 -> model.log.2
-      ... up to .5
-
-    If `path` doesn't exist, nothing happens.
+def auto_insert_missing_commas(text: str) -> str:
     """
-    try:
-        if keep <= 0:
-            # user explicitly disables keeping old logs
-            if path.exists():
-                path.unlink()
-            return
+    Very forgiving line-based fixer for JSONC-ish files where a comma is omitted
+    between adjacent properties/items.
+    Good enough for config files like the user's lls config.
+    """
+    lines = text.splitlines()
+    sig_idx = [i for i, line in enumerate(lines) if line.strip()]
+    sig_set = set(sig_idx)
 
-        if not path.exists():
-            return
-
-        oldest = path.with_name(path.name + f".{keep}")
-        if oldest.exists():
-            oldest.unlink()
-
-        for i in range(keep - 1, 0, -1):
-            src = path.with_name(path.name + f".{i}")
-            dst = path.with_name(path.name + f".{i+1}")
-            if src.exists():
-                src.rename(dst)
-
-        path.rename(path.with_name(path.name + ".1"))
-    except Exception:
-        # Never crash launcher because log rotation failed
-        return
-
-def resolve_mmproj(model_path: Path) -> Optional[Path]:
-    """If `<model>.gguf` has a sibling `<model>-mmproj.gguf`, return it."""
-    if model_path.suffix.lower() != ".gguf":
+    def next_sig(i: int) -> Optional[int]:
+        for j in range(i + 1, len(lines)):
+            if j in sig_set:
+                return j
         return None
-    mmproj = model_path.with_name(model_path.stem + "-mmproj.gguf")
-    return mmproj if mmproj.exists() else None
+
+    for i, line in enumerate(lines):
+        stripped = line.rstrip()
+        core = stripped.strip()
+        if not core:
+            continue
+        if core.endswith(("{", "[", ",", ":")):
+            continue
+        j = next_sig(i)
+        if j is None:
+            continue
+        next_core = lines[j].strip()
+        if next_core.startswith(("}", "]")):
+            continue
+        if next_core.startswith('"') or next_core.startswith("{") or next_core.startswith("["):
+            lines[i] = stripped + ","
+    return "\n".join(lines)
 
 
-def build_llama_cmd(llama_bin: Path, model_path: Path, params: dict) -> list:
-    cmd = [
-        str(llama_bin),
-        "--host", str(params["host"]),
-        "--port", str(params["port"]),
-        "--model", str(model_path),
-        "--ctx-size", str(params["ctx"]),
-        "--threads", str(params["threads"]),
-        "--batch-size", str(params["batch"]),
-        "--ubatch-size", str(params["ubatch"]),
-        "--n-gpu-layers", str(params["gpu_layers"]),
-    ]
-
-    mmproj = resolve_mmproj(model_path)
-    if mmproj:
-        cmd += ["--mmproj", str(mmproj)]
-
-    return cmd
-
-
-def format_cmd(cmd: list) -> str:
-    # 공백/특수문자 안전하게 보기 좋게
-    import shlex
-    return " ".join(shlex.quote(str(x)) for x in cmd)
-
-def run_show_profile(args):
-    home = Path.home()
-    cfg_path = Path(os.environ.get("LLS_CONFIG", str(home / ".config/lls/config.jsonc")))
-    cfg = load_jsonc(cfg_path)
-
-    models_dir = Path(os.environ.get("LLS_MODELS_DIR", str(home / "llm_models")))
-    llama_bin  = Path(os.environ.get("LLS_LLAMA_BIN", str(home / "bin/llama-server")))
-
-    # platform = args.platform or os.environ.get("LLS_PLATFORM", "wsl")
-    platform = (
-        args.platform
-        or os.environ.get("LLS_PLATFORM")
-        or detect_platform_name()
-    )
-    model_path = pick_model(models_dir, args.model)
-
-    params = resolve_params(cfg, platform, model_path.name)
-
-    # 옵션 override도 반영 (start랑 동일)
-    if args.host:
-        params["host"] = args.host
-    if args.port is not None:
-        params["port"] = int(args.port)
-
-    cmd = build_llama_cmd(llama_bin, model_path, params)
-
-    print(f"Model: {model_path.name}")
-    print(f"Platform: {platform}")
-    print("")
-    for k in ("host","port","ctx","threads","batch","ubatch","gpu_layers"):
-        if k in params:
-            print(f"{k}: {params[k]}")
-    print("\nCommand:")
-    print(format_cmd(cmd))
-
-def run_info(args):
-    home = Path.home()
-    state_dir = Path(os.environ.get("LLS_STATE_DIR", str(home / ".local/state/lls")))
-    port = args.port
-
-    statefile = state_dir / f"llama_{port}.json"
-    pidfile = state_dir / f"llama_{port}.pid"
-
-    if not statefile.exists():
-        # fallback: pidfile만 있으면 pid 정도만
-        if pidfile.exists():
-            pid = pidfile.read_text().strip()
-            print(f"running? pidfile exists (pid={pid}) port={port} (no state json)")
-        else:
-            print("stopped")
-        return
-
-    import json
-    s = json.loads(statefile.read_text(encoding="utf-8"))
-    print(f"status: running pid={s.get('pid')} port={s.get('port')} host={s.get('host')}")
-    print(f"model: {s.get('model')}")
-    print(f"log: {s.get('logfile')}")
-    print("cmd:")
-    print(format_cmd(s.get("cmd", [])))
-
-
-
-
-
-# -------------------------
-# JSONC parsing
-# -------------------------
-def strip_jsonc(text: str) -> str:
-    # Remove // line comments (not perfect for URLs inside strings, but OK for this config style)
-    text = re.sub(r"//.*?$", "", text, flags=re.M)
-    # Remove /* ... */ block comments
-    text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
-    return text
+def remove_trailing_commas(text: str) -> str:
+    return re.sub(r",\s*([}\]])", r"\1", text)
 
 
 def load_jsonc(path: Path) -> Dict[str, Any]:
     raw = path.read_text(encoding="utf-8")
-    return json.loads(strip_jsonc(raw))
+    cleaned = strip_jsonc_comments(raw)
+    cleaned = auto_insert_missing_commas(cleaned)
+    cleaned = remove_trailing_commas(cleaned)
+    try:
+        data = json.loads(cleaned)
+    except json.JSONDecodeError as e:
+        raise SystemExit(f"Failed to parse {path}: {e}")
+    if not isinstance(data, dict):
+        raise SystemExit(f"Expected object in {path}")
+    return data
 
 
-def deep_merge(a: Dict[str, Any], b: Dict[str, Any]) -> Dict[str, Any]:
-    out = dict(a)
-    for k, v in (b or {}).items():
+# -----------------------------
+# Merge helpers
+# -----------------------------
+
+def deep_copy_dict(d: Dict[str, Any]) -> Dict[str, Any]:
+    return deepcopy(d)
+
+
+def merge_config(base: Dict[str, Any], overlay: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    if not overlay:
+        return base
+    out = deep_copy_dict(base)
+    for k, v in overlay.items():
+        if k == "extra_args_append":
+            out.setdefault("extra_args", [])
+            out["extra_args"] = list(out.get("extra_args", [])) + list(v)
+            continue
+        if k == "extra_args_prepend":
+            out.setdefault("extra_args", [])
+            out["extra_args"] = list(v) + list(out.get("extra_args", []))
+            continue
         if isinstance(v, dict) and isinstance(out.get(k), dict):
-            out[k] = deep_merge(out[k], v)
+            out[k] = merge_config(out[k], v)
         else:
-            out[k] = v
+            out[k] = deepcopy(v)
     return out
 
 
-# -------------------------
-# Model selection / rule matching
-# -------------------------
-def pick_model(models_dir: Path, token: str) -> Path:
-    """
-    token may be:
-      - exact filename
-      - substring of filename (case-insensitive), first match in sorted order
-    """
-    p = models_dir / token
-    if p.exists() and p.is_file():
-        return p
-
-    token_l = token.lower()
-    cands = sorted(models_dir.glob("*.gguf"))
-    for c in cands:
-        if token_l in c.name.lower():
-            return c
-    raise FileNotFoundError(f"Model not found: {token} (dir={models_dir})")
+def slugify(text: str) -> str:
+    return re.sub(r"[^a-zA-Z0-9._-]+", "-", text.strip("/ ")).strip("-").lower()
 
 
-def rule_matches(rule_match: str, model_name: str) -> bool:
-    """
-    Your config comment says "부분매칭/정규식 느낌".
-    So we try regex search first; if pattern is invalid, fallback to substring.
-    Matching is case-insensitive.
-    """
-    if not rule_match:
-        return False
-    model_lc = model_name.lower()
-    pat = str(rule_match)
+# -----------------------------
+# Model discovery
+# -----------------------------
 
+@dataclass
+class ModelEntry:
+    publisher: str
+    name: str
+    root: Path
+    metadata_path: Optional[Path] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def model_id(self) -> str:
+        return f"{self.publisher}/{self.name}"
+
+    @property
+    def aliases(self) -> List[str]:
+        raw = self.metadata.get("aliases", [])
+        return [str(x) for x in raw] if isinstance(raw, list) else []
+
+    @property
+    def tags(self) -> List[str]:
+        raw = self.metadata.get("tags", [])
+        return [str(x) for x in raw] if isinstance(raw, list) else []
+
+    @property
+    def defaults(self) -> Dict[str, Any]:
+        raw = self.metadata.get("defaults", {})
+        return raw if isinstance(raw, dict) else {}
+
+    def resolve_model_file(self) -> Optional[Path]:
+        if isinstance(self.metadata.get("model"), str):
+            p = self.root / self.metadata["model"]
+            if p.exists():
+                return p
+
+        candidates = sorted(self.root.glob("*.gguf"))
+        candidates = [p for p in candidates if "mmproj" not in p.name.lower()]
+        if not candidates:
+            return None
+
+        split_first = [p for p in candidates if re.search(r"00001-of-\d+", p.name, re.I)]
+        if split_first:
+            return split_first[0]
+
+        if len(candidates) == 1:
+            return candidates[0]
+
+        candidates.sort(key=lambda p: (len(p.name), p.name.lower()))
+        return candidates[0]
+
+    def resolve_model_path(self) -> Optional[Path]:
+        """Resolve either a GGUF file or an MLX model directory."""
+        if isinstance(self.metadata.get("model"), str):
+            p = (self.root / self.metadata["model"]).expanduser()
+            if p.exists():
+                return p
+        return self.resolve_model_file()
+
+    def resolve_mlx_draft_path(self) -> Optional[Path]:
+        """Resolve an MLX speculative drafter/MTP directory."""
+        for key in ("draft_model", "mtp", "mlx_draft_model"):
+            raw = self.metadata.get(key)
+            if isinstance(raw, str) and raw.strip():
+                p = (self.root / raw).expanduser()
+                if p.exists():
+                    return p
+        for name in ("mtp", "MTP", "draft", "drafter"):
+            p = self.root / name
+            if p.is_dir():
+                return p
+        return None
+
+    def resolve_mmproj_file(self) -> Optional[Path]:
+        if isinstance(self.metadata.get("mmproj"), str):
+            p = self.root / self.metadata["mmproj"]
+            if p.exists():
+                return p
+        candidates = sorted(self.root.glob("*mmproj*.gguf"))
+        return candidates[0] if candidates else None
+
+    def resolve_mtp_file(self) -> Optional[Path]:
+        # Optional external MTP draft GGUF.  By convention keep it under
+        # <model>/MTP/ and start the filename with "mtp-".
+        mtp_dir = self.root / "MTP"
+        if not mtp_dir.is_dir():
+            return None
+
+        candidates = sorted(
+            p for p in mtp_dir.glob("*.gguf")
+            if p.name.lower().startswith("mtp-")
+        )
+        if not candidates:
+            return None
+        if len(candidates) > 1:
+            names = ", ".join(p.name for p in candidates)
+            raise SystemExit(
+                f"Multiple MTP draft GGUF files found in {mtp_dir}: {names}. "
+                "Keep only one mtp-*.gguf file there."
+            )
+        return candidates[0]
+
+
+def load_model_metadata(model_dir: Path) -> Tuple[Optional[Path], Dict[str, Any]]:
+    for fname in METADATA_FILES:
+        p = model_dir / fname
+        if p.exists():
+            return p, load_jsonc(p)
+    return None, {}
+
+
+def discover_models(models_dir: Path) -> List[ModelEntry]:
+    entries: List[ModelEntry] = []
+    if not models_dir.exists():
+        return entries
+    for pub in sorted(p for p in models_dir.iterdir() if p.is_dir()):
+        for model in sorted(p for p in pub.iterdir() if p.is_dir()):
+            metadata_path, metadata = load_model_metadata(model)
+            entries.append(ModelEntry(pub.name, model.name, model, metadata_path, metadata))
+    return entries
+
+
+# -----------------------------
+# Rule matching / resolution
+# -----------------------------
+
+def text_for_matching(entry: ModelEntry) -> str:
+    bits = [
+        entry.model_id,
+        entry.name,
+        entry.publisher,
+        " ".join(entry.aliases),
+        " ".join(entry.tags),
+        str(entry.metadata.get("notes", "")),
+    ]
+    return " ".join(bits).lower()
+
+
+def regex_search(pattern: str, text: str) -> bool:
     try:
-        return re.search(pat, model_lc, flags=re.I) is not None
+        return re.search(pattern, text, re.I) is not None
     except re.error:
-        return pat.lower() in model_lc
+        return pattern.lower() in text.lower()
 
 
-def resolve_params(
-    cfg: Dict[str, Any],
-    platform: str,
-    model_name: str,
-) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-    """
-    Resolve final params and return (params, debug).
-    Resolution order:
-      1) defaults
-      2) platform profile (e.g., "wsl" / "mac")
-      3) first matching model_rule:
-           - apply use_profiles in listed order
-           - apply override
-    """
-    defaults = cfg.get("defaults", {}) or {}
-    profiles = cfg.get("profiles", {}) or {}
-    rules = cfg.get("model_rules", []) or []
+def build_alias_map(config: Dict[str, Any], models: List[ModelEntry]) -> Dict[str, str]:
+    alias_map: Dict[str, str] = {}
+    for k, v in (config.get("aliases") or {}).items():
+        alias_map[str(k)] = str(v)
+    for m in models:
+        for alias in m.aliases:
+            alias_map.setdefault(alias, m.model_id)
+    return alias_map
 
-    params: Dict[str, Any] = dict(defaults)
-    applied: List[str] = []
-    matched_rule: Optional[Dict[str, Any]] = None
+def get_running_models(models: List[ModelEntry]) -> List[ModelEntry]:
+    running: List[ModelEntry] = []
+    by_id = {m.model_id: m for m in models}
 
-    # platform
-    if platform and platform in profiles and isinstance(profiles[platform], dict):
-        params = deep_merge(params, profiles[platform])
-        applied.append(platform)
+    for sf in sorted(RUN_DIR.glob("slot-*.json")):
+        st = load_state(sf)
+        if not st:
+            continue
+        pid = int(st.get("pid", -1))
+        if pid_alive(pid):
+            model_id = str(st.get("model_id", ""))
+            m = by_id.get(model_id)
+            if m is not None and all(x.model_id != m.model_id for x in running):
+                running.append(m)
+        else:
+            sf.unlink(missing_ok=True)
 
-    # first-match rule
+    # backward compatibility with the old per-model state files
+    for m in models:
+        sf = state_file_for(m)
+        st = load_state(sf)
+        if not st:
+            continue
+        pid = int(st.get("pid", -1))
+        if pid_alive(pid):
+            if all(x.model_id != m.model_id for x in running):
+                running.append(m)
+        else:
+            sf.unlink(missing_ok=True)
+
+    return running
+
+def resolve_model(query: Optional[str], config: Dict[str, Any], models: List[ModelEntry]) -> ModelEntry:
+    if not models:
+        raise SystemExit("No models found.")
+
+    if not query:
+        chosen = run_fzf_model_picker(models)
+        if not chosen:
+            raise SystemExit(1)
+        query = chosen
+
+    alias_map = build_alias_map(config, models)
+    query = alias_map.get(query, query)
+
+    by_id = {m.model_id: m for m in models}
+    if query in by_id:
+        return by_id[query]
+
+    lowered = query.lower()
+
+    exactish = [m for m in models if lowered == m.name.lower() or lowered == m.model_id.lower()]
+    if len(exactish) == 1:
+        return exactish[0]
+
+    alias_hits = [m for m in models if lowered in [a.lower() for a in m.aliases]]
+    if len(alias_hits) == 1:
+        return alias_hits[0]
+
+    partial = [m for m in models if lowered in m.model_id.lower() or lowered in m.name.lower()]
+    if len(partial) == 1:
+        return partial[0]
+    if len(partial) > 1:
+        print("Multiple models matched:", file=sys.stderr)
+        for m in partial:
+            print(f"  - {m.model_id}", file=sys.stderr)
+        raise SystemExit(2)
+
+    raise SystemExit(f"Model not found: {query}")
+
+
+def matched_rules(entry: ModelEntry, config: Dict[str, Any]) -> List[Dict[str, Any]]:
+    rules = config.get("model_rules") or []
+    text = text_for_matching(entry)
+    out = []
     for rule in rules:
-        m = (rule or {}).get("match", "")
-        if not m:
+        pattern = str(rule.get("match", "")).strip()
+        if not pattern:
             continue
-        if rule_matches(str(m), model_name):
-            matched_rule = rule
-            break
-
-    if matched_rule:
-        for prof in (matched_rule.get("use_profiles", []) or []):
-            if prof in profiles and isinstance(profiles[prof], dict):
-                params = deep_merge(params, profiles[prof])
-                applied.append(prof)
-        override = matched_rule.get("override", {}) or {}
-        if isinstance(override, dict):
-            params = deep_merge(params, override)
-
-    debug = {
-        "platform": platform,
-        "model": model_name,
-        "matched_rule": (matched_rule.get("match") if matched_rule else None),
-        "applied_profiles": applied,
-        "rule": matched_rule,
-    }
-    return params, debug
+        if regex_search(pattern, text):
+            out.append(rule)
+    return out
 
 
-# -------------------------
-# Commands
-# -------------------------
-def run_list(args: argparse.Namespace) -> None:
-    models_dir = env_path("LLS_MODELS_DIR", default_models_dir())
-    for p in sorted(models_dir.glob("*.gguf")):
-        print(p.name)
+def effective_config(
+    entry: ModelEntry,
+    config: Dict[str, Any],
+    cli_override: Optional[Dict[str, Any]] = None,
+) -> Tuple[Dict[str, Any], List[str], List[Dict[str, Any]]]:
+    cur = deep_copy_dict(BUILTIN_DEFAULTS)
+    cur = merge_config(cur, entry.defaults)
+    cur = merge_config(cur, config.get("defaults") or {})
+
+    profile_names: List[str] = []
+    rules = matched_rules(entry, config)
+    profiles = config.get("profiles") or {}
+
+    for rule in rules:
+        for profile_name in rule.get("use_profiles", []) or []:
+            profile = profiles.get(profile_name)
+            if profile:
+                cur = merge_config(cur, profile)
+                profile_names.append(profile_name)
+
+    for rule in rules:
+        cur = merge_config(cur, rule.get("override") or {})
+
+    cur = merge_config(cur, cli_override or {})
+    return cur, profile_names, rules
 
 
-def _pidfile_for_port(state_dir: Path, port: int) -> Path:
-    return state_dir / f"llama_{port}.pid"
+# -----------------------------
+# Command construction
+# -----------------------------
+
+def flagify_extra(extra_args: Iterable[Any]) -> List[str]:
+    return [str(x) for x in extra_args]
 
 
-# ----------------------------
-# Extra lightweight cache state (for fast status/info)
-# ~/.cache/lls/<port>.json
-# ----------------------------
-def default_cache_state_dir() -> Path:
-    return Path.home() / ".cache" / "lls"
+def build_backend_command(entry: ModelEntry, cfg: Dict[str, Any]) -> List[str]:
+    backend_raw = str(entry.metadata.get("backend") or cfg.get("backend") or "llama-server")
+    backend_key = backend_raw.strip().lower()
 
+    is_mtplx = backend_key in {"mtplx"}
 
-def _cache_statefile_for_port(port: int) -> Path:
-    return default_cache_state_dir() / f"{port}.json"
+    if is_mtplx:
+        backend_bin = (
+            cfg.get("backend_bin")
+            or cfg.get("mtplx_bin")
+            or entry.metadata.get("backend_bin")
+            or entry.metadata.get("mtplx_bin")
+            or "mtplx"
+        )
 
+        model_id = entry.metadata.get("model")
+        if not isinstance(model_id, str) or not model_id.strip():
+            raise SystemExit(
+                'MTPLX requires a model ID in metadata, for example: '
+                '"model": "Youssofal/Qwen3.8-27B-MTPLX-Bare-Speed"'
+            )
 
-def write_state(port: int, pid: int, model: str, cmdline: str) -> None:
-    d = default_cache_state_dir()
-    d.mkdir(parents=True, exist_ok=True)
-    p = d / f"{port}.json"
-    data = {"pid": pid, "port": port, "model": model, "cmd": cmdline}
-    p.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        cmd = [str(backend_bin), "serve", "--model", model_id.strip()]
 
-
-def read_state(port: int) -> Optional[Dict[str, Any]]:
-    p = _cache_statefile_for_port(port)
-    if not p.exists():
-        return None
-    try:
-        return json.loads(p.read_text(encoding="utf-8"))
-    except Exception:
-        return None
-
-
-def remove_state(port: int) -> None:
-    try:
-        _cache_statefile_for_port(port).unlink()
-    except FileNotFoundError:
-        pass
-
-
-def _statefile_for_port(state_dir: Path, port: int) -> Path:
-    # managed detailed state json
-    return state_dir / f"llama_{port}.json"
-
-
-def parse_overrides(tokens: List[str]) -> Tuple[Dict[str, Any], bool]:
-    """
-    tokens: argparse.REMAINDER; allow -d/--detach anywhere.
-    Returns: (overrides_dict, detach_flag_from_tokens)
-    """
-    detach = False
-    filtered: List[str] = []
-    for t in tokens:
-        if t in ("-d", "--detach"):
-            detach = True
-        else:
-            filtered.append(t)
-
-    out: Dict[str, Any] = {}
-    i = 0
-    while i < len(filtered):
-        t = filtered[i]
-        if not t.startswith("--"):
-            raise SystemExit(f"override: unexpected token {t}")
-        key = t[2:].replace("-", "_")
-        # bool flag
-        if i + 1 >= len(filtered) or filtered[i + 1].startswith("--"):
-            out[key] = True
-            i += 1
-            continue
-        val = filtered[i + 1]
-        if re.fullmatch(r"-?\d+", val):
-            v: Any = int(val)
-        else:
-            if val.lower() in ("true", "false"):
-                v = (val.lower() == "true")
+        def add_mtplx_opt(key: str, flag: str):
+            val = cfg.get(key)
+            if val is None:
+                return
+            if isinstance(val, bool):
+                if val:
+                    cmd.append(flag)
             else:
-                try:
-                    v = float(val)
-                except ValueError:
-                    v = val
-        out[key] = v
-        i += 2
+                cmd.extend([flag, str(val)])
 
-    return out, detach
+        add_mtplx_opt("host", "--host")
+        add_mtplx_opt("port", "--port")
+        add_mtplx_opt("mtplx_context", "--context-window")
+        add_mtplx_opt("mtplx_paged_kv_quantization", "--paged-kv-quantization")
+        add_mtplx_opt("mtplx_temperature", "--temperature")
+        add_mtplx_opt("mtplx_top_p", "--top-p")
+        add_mtplx_opt("mtplx_top_k", "--top-k")
+        add_mtplx_opt("mtplx_api_key", "--api-key")
 
-def is_pid_alive(pid: int) -> bool:
+        cmd.extend(flagify_extra(cfg.get("mtplx_extra_args", [])))
+        return cmd
+
+    is_omlx = backend_key in {"omlx", "omlx-server", "omlx.server"}
+
+    if is_omlx:
+        # oMLX discovers models from --model-dir instead of accepting one
+        # --model argument.  Preserve lls's single-selected-model semantics by
+        # creating a tiny staging model-dir that contains exactly one symlink
+        # to the selected MLX model.  /v1/models therefore exposes only that
+        # selected model to OpenCode.
+        backend_bin = (
+            cfg.get("backend_bin")
+            or cfg.get("omlx_bin")
+            or entry.metadata.get("backend_bin")
+            or entry.metadata.get("omlx_bin")
+            or "omlx"
+        )
+
+        raw_model = entry.metadata.get("model")
+        if isinstance(raw_model, str) and raw_model.strip():
+            model_path = (entry.root / raw_model).expanduser().resolve()
+        else:
+            model_path = entry.root.resolve()
+
+        if not model_path.is_dir():
+            raise SystemExit(
+                f"oMLX requires an MLX-format model directory, not a GGUF file: {model_path}"
+            )
+
+        # By default expose the real model directory name.  omlx_model_id can
+        # optionally override the API-visible ID used by OpenCode.  A slash is
+        # allowed (publisher/model); absolute paths and '..' are rejected.
+        api_model_id = str(
+            entry.metadata.get("omlx_model_id")
+            or cfg.get("omlx_model_id")
+            or model_path.name
+        ).strip()
+        if not api_model_id:
+            raise SystemExit("omlx_model_id cannot be empty")
+        api_rel = Path(api_model_id)
+        if api_rel.is_absolute() or ".." in api_rel.parts:
+            raise SystemExit(
+                f"Invalid oMLX model ID {api_model_id!r}: use a relative model name"
+            )
+
+        staging_root = STATE_DIR / "omlx-models" / slugify(entry.model_id)
+        staging_root.mkdir(parents=True, exist_ok=True)
+
+        # This staging root belongs only to this LLS model entry, so remove any
+        # stale links/directories left by an older omlx_model_id.
+        for child in list(staging_root.iterdir()):
+            if child.is_symlink() or child.is_file():
+                child.unlink()
+            elif child.is_dir():
+                import shutil
+                shutil.rmtree(child)
+
+        link_path = staging_root / api_rel
+        link_path.parent.mkdir(parents=True, exist_ok=True)
+        link_path.symlink_to(model_path, target_is_directory=True)
+
+        cmd = [str(backend_bin), "serve", "--model-dir", str(staging_root)]
+
+        def add_omlx_opt(key: str, flag: str):
+            val = cfg.get(key)
+            if val is None:
+                return
+            if isinstance(val, bool):
+                if val:
+                    cmd.append(flag)
+            else:
+                cmd.extend([flag, str(val)])
+
+        add_omlx_opt("host", "--host")
+        add_omlx_opt("port", "--port")
+        add_omlx_opt("omlx_memory_guard", "--memory-guard")
+        add_omlx_opt("omlx_memory_guard_gb", "--memory-guard-gb")
+        add_omlx_opt("omlx_paged_ssd_cache_dir", "--paged-ssd-cache-dir")
+        add_omlx_opt("omlx_hot_cache_max_size", "--hot-cache-max-size")
+        add_omlx_opt("omlx_max_concurrent_requests", "--max-concurrent-requests")
+        add_omlx_opt("omlx_api_key", "--api-key")
+        add_omlx_opt("omlx_log_level", "--log-level")
+
+        cmd.extend(flagify_extra(cfg.get("omlx_extra_args", [])))
+        return cmd
+
+    is_mlx = backend_key in {
+        "mlx-vlm", "mlx_vlm", "mlx-vlm-server", "mlx_vlm.server"
+    }
+
+    if is_mlx:
+        model_path = entry.resolve_model_path()
+        if not model_path:
+            raise SystemExit(
+                f"No MLX model path found in {entry.root}. "
+                'Set metadata "model" to the MLX model directory (for example "4-bit").'
+            )
+
+        backend_bin = (
+            cfg.get("backend_bin")
+            or cfg.get("mlx_vlm_server_bin")
+            or entry.metadata.get("backend_bin")
+            or entry.metadata.get("mlx_vlm_server_bin")
+            or "mlx_vlm.server"
+        )
+        cmd = [str(backend_bin), "--model", str(model_path)]
+
+        def add_mlx_opt(key: str, flag: str):
+            val = cfg.get(key)
+            if val is None:
+                return
+            if isinstance(val, bool):
+                if val:
+                    cmd.append(flag)
+            else:
+                cmd.extend([flag, str(val)])
+
+        add_mlx_opt("host", "--host")
+        add_mlx_opt("port", "--port")
+        add_mlx_opt("ctx", "--max-kv-size")
+        add_mlx_opt("mlx_prefill_step_size", "--prefill-step-size")
+        add_mlx_opt("mlx_kv_bits", "--kv-bits")
+        add_mlx_opt("mlx_kv_quant_scheme", "--kv-quant-scheme")
+        add_mlx_opt("mlx_kv_group_size", "--kv-group-size")
+        add_mlx_opt("mlx_quantized_kv_start", "--quantized-kv-start")
+        add_mlx_opt("mlx_vision_cache_size", "--vision-cache-size")
+        add_mlx_opt("mlx_log_level", "--log-level")
+        add_mlx_opt("mlx_enable_thinking", "--enable-thinking")
+        add_mlx_opt("mlx_trust_remote_code", "--trust-remote-code")
+        add_mlx_opt("mlx_reload", "--reload")
+
+        draft = entry.resolve_mlx_draft_path()
+        draft_enabled = cfg.get("mlx_mtp", cfg.get("mtp", True))
+        if draft and draft_enabled:
+            cmd.extend(["--draft-model", str(draft)])
+            draft_kind = cfg.get("mlx_draft_kind")
+            if draft_kind is None and draft.name.lower() == "mtp":
+                draft_kind = "mtp"
+            if draft_kind:
+                cmd.extend(["--draft-kind", str(draft_kind)])
+            block_size = cfg.get("mlx_draft_block_size")
+            if block_size is not None:
+                cmd.extend(["--draft-block-size", str(block_size)])
+
+        # Do not reuse legacy flag_* here; those are llama-server flags.
+        cmd.extend(flagify_extra(cfg.get("mlx_extra_args", [])))
+        return cmd
+
+    # llama.cpp / llama-server compatible backend (existing behavior).
+    model_file = entry.resolve_model_file()
+    if not model_file:
+        raise SystemExit(f"No model gguf found in {entry.root}")
+
+    backend_bin = cfg.get("backend_bin") or cfg.get("llama_server_bin") or backend_raw
+    cmd = [str(backend_bin)]
+
+    def add_opt(key: str, flag: str):
+        val = cfg.get(key)
+        if val is None:
+            return
+        cmd.extend([flag, str(val)])
+
+    cmd.extend(["--model", str(model_file)])
+    add_opt("host", "--host")
+    add_opt("port", "--port")
+    add_opt("ctx", "--ctx-size")
+    add_opt("threads", "--threads")
+    add_opt("batch", "--batch-size")
+    add_opt("ubatch", "--ubatch-size")
+    add_opt("gpu_layers", "--n-gpu-layers")
+
+    mmproj = None if cfg.get("no_mmproj") else entry.resolve_mmproj_file()
+    if mmproj:
+        cmd.extend(["--mmproj", str(mmproj)])
+
+    spec_type = str(cfg.get("flag_spec_type", "")).lower()
+    explicit_draft = cfg.get("flag_spec_draft_model") or cfg.get("flag_model_draft")
+    if "draft-mtp" in {x.strip() for x in spec_type.split(",")} and not explicit_draft:
+        mtp_file = entry.resolve_mtp_file()
+        if mtp_file:
+            cmd.extend(["--spec-draft-model", str(mtp_file)])
+
+    for key, val in list(cfg.items()):
+        if not key.startswith("flag_"):
+            continue
+        flag = "--" + key[5:].replace("_", "-")
+        if isinstance(val, bool):
+            if val:
+                cmd.append(flag)
+        else:
+            cmd.extend([flag, str(val)])
+
+    cmd.extend(flagify_extra(cfg.get("extra_args", [])))
+    return cmd
+
+
+# -----------------------------
+# Process state helpers
+# -----------------------------
+
+def ensure_state_dir() -> None:
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    RUN_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def state_file_for(entry: ModelEntry) -> Path:
+    return RUN_DIR / f"{slugify(entry.model_id)}.json"
+
+
+def log_file_for(entry: ModelEntry) -> Path:
+    return LOG_DIR / f"{slugify(entry.model_id)}.log"
+
+
+def state_file_for_slot(slot: int) -> Path:
+    return RUN_DIR / f"slot-{slot}.json"
+
+
+def parse_start_slot_and_model(args: argparse.Namespace) -> Tuple[int, Optional[str]]:
+    first = getattr(args, "slot_or_model", None)
+    second = getattr(args, "model", None)
+
+    slot = 1
+    model_query: Optional[str] = None
+
+    if first:
+        if str(first).isdigit():
+            slot = int(first)
+            if slot < 1:
+                raise SystemExit("slot must be >= 1")
+            model_query = second
+        else:
+            model_query = first
+            if second is not None:
+                raise SystemExit("Too many positional arguments for start")
+    elif second is not None:
+        raise SystemExit("Invalid start arguments")
+
+    return slot, model_query
+
+
+def rotate_log_file(path: Path, keep: int = DEFAULT_LOG_ROTATIONS) -> None:
+    if keep < 1:
+        keep = 1
+    oldest = path.with_name(f"{path.name}.{keep}")
+    if oldest.exists():
+        oldest.unlink()
+    for i in range(keep - 1, 0, -1):
+        src = path.with_name(f"{path.name}.{i}")
+        dst = path.with_name(f"{path.name}.{i + 1}")
+        if src.exists():
+            src.rename(dst)
+    if path.exists() and path.stat().st_size > 0:
+        path.rename(path.with_name(f"{path.name}.1"))
+
+
+def pid_alive(pid: int) -> bool:
+    """Return True only for a genuinely live (non-zombie) process."""
+    if pid <= 0:
+        return False
     try:
         os.kill(pid, 0)
-        return True
-    except Exception:
+    except OSError:
         return False
 
-
-def port_open(host: str, port: int, timeout: float = 0.5) -> bool:
+    # kill(pid, 0) also succeeds for zombies.  Treat those as stopped so
+    # stale slot state does not continue to show as "running".
     try:
-        with socket.create_connection((host, port), timeout=timeout):
-            return True
+        out = subprocess.run(
+            ["ps", "-o", "stat=", "-p", str(pid)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=1.0,
+            check=False,
+        ).stdout.strip()
+        if not out:
+            return False
+        if out.startswith("Z"):
+            return False
     except Exception:
-        return False
-
-def run_status(args: argparse.Namespace) -> None:
-    # Managed pidfile first; fallback to port check (external)
-    state_dir = env_path("LLS_STATE_DIR", default_state_dir())
-    port = int(args.port)
-    pidfile = _pidfile_for_port(state_dir, port)
-    statefile = _statefile_for_port(state_dir, port)
-
-    if pidfile.exists():
-        try:
-            pid = int(pidfile.read_text().strip())
-        except Exception:
-            print("stale pidfile (unreadable)")
-            return
-
-        if is_pid_alive(pid):
-            cached = read_state(port)
-            if not cached and statefile.exists():
-                try:
-                    cached = json.loads(statefile.read_text(encoding="utf-8"))
-                except Exception:
-                    cached = None
-
-            if cached:
-                print("running")
-                print(f"  pid    : {pid}")
-                print(f"  port   : {port}")
-                print(f"  model  : {cached.get('model')}")
-            else:
-                print(f"running pid={pid} port={port} (managed)")
-
-            return
-
-        # pidfile exists but pid dead
-        if not port_open("127.0.0.1", port):
-            pidfile.unlink(missing_ok=True)
-            statefile.unlink(missing_ok=True)
-            remove_state(port)
-            print("stopped (cleaned stale pid/state)")
-            return
-
-        print(f"running (external process on port {port}); stale pidfile exists")
-        return
-
-    if port_open("127.0.0.1", port):
-        print(f"running (external process on port {port})")
-        print("  model  : unknown (not managed by lls)")
-        return
-
-    print("stopped")
-
-def run_stop(args: argparse.Namespace) -> None:
-    state_dir = env_path("LLS_STATE_DIR", default_state_dir())
-    port = int(args.port)
-    pidfile = _pidfile_for_port(state_dir, port)
-    statefile = _statefile_for_port(state_dir, port)
-
-    if not pidfile.exists():
-        if port_open("127.0.0.1", port):
-            print(f"[lls] port {port} is open but no pidfile (external). Stop manually.")
-        else:
-            print(f"[lls] not running (no pidfile for port {port})")
-        return
-
-    try:
-        pid = int(pidfile.read_text().strip())
-    except Exception:
-        pidfile.unlink(missing_ok=True)
-        statefile.unlink(missing_ok=True)
-        remove_state(port)
-        print("[lls] stale pidfile cleaned")
-        return
-
-    if not is_pid_alive(pid):
-        pidfile.unlink(missing_ok=True)
-        statefile.unlink(missing_ok=True)
-        remove_state(port)
-        print("[lls] pid not found; cleaned pid/state")
-        return
-
-    try:
-        os.kill(pid, signal.SIGINT)
-    except Exception:
+        # If ps is unavailable, fall back to the portable kill(0) result.
         pass
-
-    t0 = time.time()
-    while time.time() - t0 < 3.0:
-        if not is_pid_alive(pid):
-            pidfile.unlink(missing_ok=True)
-            statefile.unlink(missing_ok=True)
-            remove_state(port)
-            print("[lls] stopped")
-            return
-        time.sleep(0.1)
-
-    try:
-        os.kill(pid, signal.SIGTERM)
-    except Exception:
-        pass
-
-    pidfile.unlink(missing_ok=True)
-    statefile.unlink(missing_ok=True)
-    remove_state(port)
-    print("[lls] stopped (forced)")
-
-def run_show_profile(args: argparse.Namespace) -> None:
-    cfg_path = Path(args.config)
-    cfg = load_jsonc(cfg_path)
-
-    models_dir = env_path("LLS_MODELS_DIR", default_models_dir())
-
-    # Accept substring just like start: resolve to a concrete filename for clarity
-    try:
-        model_path = pick_model(models_dir, args.model)
-        model_name = model_path.name
-    except Exception:
-        # If models_dir isn't available in this context, fall back to the raw token
-        model_name = args.model
-
-    # platform = args.platform or os.environ.get("LLS_PLATFORM", "wsl")
-    platform = (
-        args.platform
-        or os.environ.get("LLS_PLATFORM")
-        or detect_platform_name()
-    )
-    params, dbg = resolve_params(cfg, platform, model_name)
-
-    print(f"Model: {dbg['model']}")
-    print(f"Platform: {dbg['platform']}")
-    print(f"Matched rule: {dbg['matched_rule']}")
-    print(f"Applied profiles: {', '.join(dbg['applied_profiles']) if dbg['applied_profiles'] else '(none)'}")
-    print("")
-
-    keys = ["host", "port", "ctx", "threads", "batch", "ubatch", "gpu_layers"]
-    for k in keys:
-        if k in params:
-            print(f"{k}: {params[k]}")
-
-    extra = {k: v for k, v in params.items() if k not in set(keys)}
-    if extra:
-        print("\nExtra:")
-        for k in sorted(extra.keys()):
-            print(f"{k}: {extra[k]}")
+    return True
 
 
-def run_start(args: argparse.Namespace) -> None:
-    cfg_path = env_path("LLS_CONFIG", DEFAULT_CONFIG_PATH)
-    cfg = load_jsonc(cfg_path)
+def _signal_process(pid: int, sig: int) -> None:
+    """Signal the whole server process group when possible.
 
-    models_dir = env_path("LLS_MODELS_DIR", default_models_dir())
-    llama_bin = env_path("LLS_LLAMA_BIN", default_llama_bin())
-
-    # platform = os.environ.get("LLS_PLATFORM", "wsl")  # mac / wsl
-    # platform = (
-    #     args.platform
-    #     or os.environ.get("LLS_PLATFORM")
-    #     or detect_platform_name()
-    # )
-    platform = (
-        getattr(args, "platform", None)
-        or os.environ.get("LLS_PLATFORM")
-        or detect_platform_name()
-    )
-
-    model_path = pick_model(models_dir, args.model)
-    params, dbg = resolve_params(cfg, platform, model_path.name)
-
-    # Apply direct CLI overrides first (host/port)
-    if getattr(args, "host", None):
-        params["host"] = args.host
-    if getattr(args, "port", None) is not None:
-        params["port"] = int(args.port)
-
-    # Temporary overrides (argparse.REMAINDER), also allow -d/--detach anywhere
-    detach_from_tokens = False
-    if getattr(args, "overrides", None):
-        ov, detach_from_tokens = parse_overrides(list(args.overrides))
-        params.update(ov)
-
-    detach = bool(getattr(args, "detach", False)) or detach_from_tokens
-
-    port = int(params.get("port", 8080))
-    host = str(params.get("host", "0.0.0.0"))
-
-    state_dir = env_path("LLS_STATE_DIR", default_state_dir())
-    logs_dir = env_path("LLS_LOGS_DIR", default_logs_dir())
-    state_dir.mkdir(parents=True, exist_ok=True)
-    logs_dir.mkdir(parents=True, exist_ok=True)
-
-    pidfile = _pidfile_for_port(state_dir, port)
-    statefile = _statefile_for_port(state_dir, port)
-    logfile = logs_dir / f"{model_path.name}.log"
-
-    # ✅ ensure logfile exists immediately (prevents "Logfile not found" race)
-    try:
-        logfile.parent.mkdir(parents=True, exist_ok=True)
-        logfile.touch(exist_ok=True)
-    except Exception:
-        pass
-
-    # # Detach 모드에서만 로그를 파일로 저장 (무한 누적 방지: 실행마다 교체 + 최근 N개만 보관)
-    # log_keep = int(os.environ.get("LLS_LOG_KEEP", "5"))
-    # if detach:
-    #     rotate_log(logfile, keep=log_keep)
-
-    # already running?
-    if pidfile.exists():
-        try:
-            pid = int(pidfile.read_text().strip())
-            os.kill(pid, 0)
-            print(f"[lls] Already running (pid={pid}) on port {port}. Stop first: lls stop --port {port}", file=sys.stderr)
-            sys.exit(2)
-        except Exception:
-            pidfile.unlink(missing_ok=True)
-            statefile.unlink(missing_ok=True)
-            remove_state(port)
-
-    cmd = build_llama_cmd(llama_bin, model_path, params)
-
-    print("[lls] Starting llama-server:")
-    print("      " + format_cmd(cmd))
-    if detach:
-        print(f"[lls] log file: {logfile}")
-
-    state = {
-        "pid": None,
-        "port": port,
-        "host": host,
-        "model": model_path.name,
-        "model_path": str(model_path),
-        "logfile": str(logfile) if detach else None,
-        "cmd": cmd,
-        "started_at": time.strftime("%Y-%m-%d %H:%M:%S"),
-        "platform": platform,
-        "resolved": params,
-        "dbg": dbg,
-    }
-
-    def _cleanup_files() -> None:
-        pidfile.unlink(missing_ok=True)
-        statefile.unlink(missing_ok=True)
-        remove_state(port)
-
-    def _write_state(pid: int) -> None:
-        pidfile.write_text(str(pid), encoding="utf-8")
-        state["pid"] = pid
-        statefile.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
-        write_state(port, pid, model_path.name, format_cmd(cmd))
-    if detach:
-        # Detach mode: run llama-server in background and capture logs with size-based rotation.
-        # We cannot use RotatingFileHandler directly as stdout for an external process because
-        # rotation only triggers when the handler writes. So we create a FIFO and a small
-        # background log-pump that reads the FIFO and writes through RotatingFileHandler.
-        fifo_path = _fifo_for_port(state_dir, port)
-        try:
-            fifo_path.unlink(missing_ok=True)
-        except Exception:
-            pass
-        os.mkfifo(fifo_path, 0o600)
-
-        pump_err = logfile.with_suffix(logfile.suffix + ".pump.err")
-        pump_err_fp = open(pump_err, "a", encoding="utf-8", errors="replace", buffering=1)
-
-        lp = subprocess.Popen(
-            _log_pump_cmd(fifo_path, logfile),
-            stdout=subprocess.DEVNULL,
-            stderr=pump_err_fp,               # ✅ DEVNULL 금지
-            start_new_session=True,
-            close_fds=True,
-        )
-
-        # # Start log pump first (reader), then start llama-server with stdout redirected to FIFO (writer)
-        # lp = subprocess.Popen(
-        #     _log_pump_cmd(fifo_path, logfile),
-        #     stdout=subprocess.DEVNULL,
-        #     stderr=subprocess.DEVNULL,
-        #     start_new_session=True,
-        #     close_fds=True,
-        # )
-
-        time.sleep(0.15)
-        if lp.poll() is not None:
-            _cleanup_files()
-            print(f"[lls] log pump failed to start (rc={lp.returncode}).", file=sys.stderr)
-            try:
-                print(f"[lls] pump stderr: {pump_err}", file=sys.stderr)
-            except Exception:
-                pass
-            sys.exit(lp.returncode or 1)
-
-        # # If log pump failed immediately, don't hang waiting on FIFO.
-        # if lp.poll() is not None:
-        #     _cleanup_files()
-        #     print(f"[lls] log pump failed to start (rc={lp.returncode}).", file=sys.stderr)
-        #     sys.exit(lp.returncode or 1)
-
-        # Open FIFO in RDWR non-blocking mode to avoid deadlock if the log pump fails early.
-        # (If we open write-only, it can block forever waiting for a reader.)
-        try:
-            fd = os.open(fifo_path, os.O_RDWR | os.O_NONBLOCK)
-            w = os.fdopen(fd, "wb", buffering=0)
-        except Exception:
-            try:
-                lp.terminate()
-            except Exception:
-                pass
-            _cleanup_files()
-            print(f"[lls] failed to open fifo for logging: {fifo_path}", file=sys.stderr)
-            sys.exit(1)
-
-        p = subprocess.Popen(
-            cmd,
-            stdout=w,
-            stderr=subprocess.STDOUT,
-            start_new_session=True,
-            close_fds=True,
-        )
-
-        # close our reference; llama-server holds it
-        try:
-            w.close()
-        except Exception:
-            pass
-
-        if p.poll() is not None:
-            try:
-                lp.terminate()
-            except Exception:
-                pass
-            _cleanup_files()
-            print(f"[lls] failed to start (rc={p.returncode}). See log: {logfile}", file=sys.stderr)
-            sys.exit(p.returncode or 1)
-
-        state["log_pump_pid"] = lp.pid
-        state["fifo"] = str(fifo_path)
-        _write_state(p.pid)
-        print(f"[lls] started (pid={p.pid})")
-        return
-
-
-    # Foreground mode: stream logs safely, don't crash on non-utf8
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=0)
-
-    if p.poll() is not None:
-        _cleanup_files()
-        print(f"[lls] failed to start (rc={p.returncode})", file=sys.stderr)
-        sys.exit(p.returncode or 1)
-
-    _write_state(p.pid)
-
-    try:
-        assert p.stdout is not None
-        while True:
-                chunk = p.stdout.readline()
-                if not chunk:
-                    break
-                sys.stdout.write(chunk.decode("utf-8", errors="replace"))
-                sys.stdout.flush()
-    except KeyboardInterrupt:
-        print("\n[lls] Ctrl+C received. Stopping...", file=sys.stderr)
-        try:
-            p.send_signal(signal.SIGINT)
-        except Exception:
-            pass
-    except Exception as e:
-        print(f"\n[lls] ERROR while streaming logs: {e}", file=sys.stderr)
-        try:
-            p.terminate()
-        except Exception:
-            pass
-        _cleanup_files()
-        raise
-
-    rc = p.wait()
-    _cleanup_files()
-    print(f"[lls] exited rc={rc}")
-    sys.exit(rc)
-
-def run_log(args: argparse.Namespace) -> None:
-    """Show logs for the currently managed llama-server instance.
-
-    Note: logs are only persisted when started with -d/--detach.
+    cmd_start() uses start_new_session=True, so the llama-server PID is also
+    the process-group leader.  Killing the group prevents helper/child
+    processes from being left behind.
     """
-    state_dir = env_path("LLS_STATE_DIR", default_state_dir())
-    port = int(getattr(args, "port", int(os.environ.get("LLAMA_PORT", "8080"))))
-    statefile = _statefile_for_port(state_dir, port)
-    pidfile = _pidfile_for_port(state_dir, port)
+    if os.name == "posix":
+        try:
+            os.killpg(pid, sig)
+            return
+        except (ProcessLookupError, PermissionError):
+            pass
+        except OSError:
+            pass
+    os.kill(pid, sig)
 
-    if not statefile.exists():
-        # If pidfile exists but state json missing, give a more helpful message.
-        if pidfile.exists():
-            print("running (pidfile exists) but detailed state is missing:", statefile)
-            print("Tip: start via 'lls start ... -d' so state/log are written.")
-        else:
-            print("No running session (statefile missing)")
-        return
+
+def _wait_pid_exit(pid: int, timeout: float) -> bool:
+    deadline = time.monotonic() + max(0.0, timeout)
+    while time.monotonic() < deadline:
+        if not pid_alive(pid):
+            return True
+        time.sleep(0.10)
+    return not pid_alive(pid)
+
+
+def load_state(path: Path) -> Optional[Dict[str, Any]]:
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
+def save_state(path: Path, data: Dict[str, Any]) -> None:
+    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+
+def set_active(entry: ModelEntry) -> None:
+    save_state(ACTIVE_FILE, {"model_id": entry.model_id})
+
+
+def get_active_model_id() -> Optional[str]:
+    st = load_state(ACTIVE_FILE)
+    if st:
+        return st.get("model_id")
+    return None
+
+
+def clear_active_if(entry: ModelEntry) -> None:
+    active = get_active_model_id()
+    if active == entry.model_id and ACTIVE_FILE.exists():
+        ACTIVE_FILE.unlink()
+
+
+# -----------------------------
+# fzf helpers
+# -----------------------------
+
+def have_cmd(name: str) -> bool:
+    from shutil import which
+    return which(name) is not None
+
+
+def run_fzf(lines: List[str], prompt: str = "model> ") -> Optional[str]:
+    if not lines:
+        return None
+    if not have_cmd("fzf"):
+        return lines[0]
+    proc = subprocess.run(
+        ["fzf", "--prompt", prompt, "--height", "80%", "--layout", "reverse", "--border"],
+        input="\n".join(lines),
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+    )
+    if proc.returncode != 0:
+        return None
+    return proc.stdout.strip() or None
+
+
+def run_fzf_model_picker(models: List[ModelEntry]) -> Optional[str]:
+    lines = []
+    for m in models:
+        tags = f" [{', '.join(m.tags)}]" if m.tags else ""
+        aliases = f" ({', '.join(m.aliases)})" if m.aliases else ""
+        lines.append(f"{m.model_id}{aliases}{tags}")
+    picked = run_fzf(lines)
+    if not picked:
+        return None
+    return picked.split(" (")[0].split(" [")[0]
+
+
+def run_action_picker() -> Optional[str]:
+    return run_fzf([
+        "start",
+        "stop",
+        "status",
+        "log",
+        "show-profile",
+        "pick",
+    ], prompt="action> ")
+
+
+# -----------------------------
+# Presentation helpers
+# -----------------------------
+
+def format_kv_table(items: List[Tuple[str, Any]]) -> str:
+    width = max((len(k) for k, _ in items), default=0)
+    return "\n".join(f"{k:<{width}} : {v}" for k, v in items)
+
+
+def pretty_cmd(cmd: List[str]) -> str:
+    return " ".join(shlex.quote(x) for x in cmd)
+
+
+def rule_label(rule: Dict[str, Any]) -> str:
+    name = rule.get("name")
+    match = rule.get("match")
+    if name:
+        return f"{name} ({match})"
+    return str(match)
+
+
+# -----------------------------
+# Subcommands
+# -----------------------------
+
+def cmd_list(args: argparse.Namespace, config: Dict[str, Any], models: List[ModelEntry]) -> int:
+    if args.ids:
+        for m in models:
+            print(m.model_id)
+        return 0
+    for m in models:
+        print(m.model_id)
+    return 0
+
+
+def cmd_pick(args: argparse.Namespace, config: Dict[str, Any], models: List[ModelEntry]) -> int:
+    picked = run_fzf_model_picker(models)
+    if picked:
+        print(picked)
+        return 0
+    return 1
+
+
+def cmd_show_profile(args: argparse.Namespace, config: Dict[str, Any], models: List[ModelEntry]) -> int:
+    entry = resolve_model(args.model, config, models)
+    cli_override: Dict[str, Any] = {}
+    if args.port is not None:
+        cli_override["port"] = args.port
+    cfg, profile_names, rules = effective_config(entry, config, cli_override)
+    cmd = build_backend_command(entry, cfg)
+    model_file = entry.resolve_model_path()
+    mmproj = entry.resolve_mmproj_file()
+    mlx_draft = entry.resolve_mlx_draft_path()
+
+    info = [
+        ("Requested", args.model or "<picker>"),
+        ("Resolved ID", entry.model_id),
+        ("Model dir", str(entry.root)),
+        ("Model file", model_file.name if model_file else "<missing>"),
+        ("MMProj", mmproj.name if mmproj else "-"),
+        ("MLX draft", str(mlx_draft) if mlx_draft else "-"),
+        ("Metadata", str(entry.metadata_path) if entry.metadata_path else "-"),
+        ("Aliases", ", ".join(entry.aliases) if entry.aliases else "-"),
+        ("Tags", ", ".join(entry.tags) if entry.tags else "-"),
+        ("Applied profiles", ", ".join(profile_names) if profile_names else "-"),
+        ("Matched rules", ", ".join(rule_label(r) for r in rules) if rules else "-"),
+        ("Backend", entry.metadata.get("backend") or cfg.get("backend")),
+        ("oMLX API model ID", entry.metadata.get("omlx_model_id") or cfg.get("omlx_model_id") or entry.name),
+        ("Host", cfg.get("host")),
+        ("Port", cfg.get("port")),
+        ("Ctx", cfg.get("ctx")),
+        ("Threads", cfg.get("threads")),
+        ("Batch", cfg.get("batch")),
+        ("UBatch", cfg.get("ubatch")),
+        ("GPU layers", cfg.get("gpu_layers")),
+    ]
+    print(format_kv_table(info))
+
+    extra_args = cfg.get("extra_args", []) or []
+    print("\nExtra args:")
+    if extra_args:
+        for a in extra_args:
+            print(f"  {a}")
+    else:
+        print("  -")
+
+    print("\nCommand:")
+    print(pretty_cmd(cmd))
+    return 0
+
+
+def cmd_start(args: argparse.Namespace, config: Dict[str, Any], models: List[ModelEntry]) -> int:
+    ensure_state_dir()
+
+    slot, model_query = parse_start_slot_and_model(args)
+    entry = resolve_model(model_query, config, models)
+    state_path = state_file_for_slot(slot)
+    existing = load_state(state_path)
+    if existing and pid_alive(int(existing.get("pid", -1))):
+        existing_model = existing.get("model_id", "<unknown>")
+        print(f"Slot {slot} already running: {existing_model} (pid {existing['pid']})")
+        if existing_model == entry.model_id:
+            set_active(entry)
+        return 1
+
+    cli_override: Dict[str, Any] = {}
+    base_port = int(config.get("base_port", BUILTIN_DEFAULTS.get("port", 8080)))
+    port_for_slot = base_port + (slot - 1)
+
+    cli_override["port"] = port_for_slot
+    if args.port is not None:
+        cli_override["port"] = args.port
+    if args.ctx is not None:
+        cli_override["ctx"] = args.ctx
+    cfg, profile_names, rules = effective_config(entry, config, cli_override)
+    cmd = build_backend_command(entry, cfg)
+
+    rotations = int(config.get("log_rotations", DEFAULT_LOG_ROTATIONS))
+    log_path = log_file_for(entry) if slot == 1 else LOG_DIR / f"{slugify(entry.model_id)}.slot-{slot}.log"
+    rotate_log_file(log_path, rotations)
+    log_f = open(log_path, "ab")
+
+    proc = subprocess.Popen(
+        cmd,
+        stdout=log_f,
+        stderr=subprocess.STDOUT,
+        cwd=str(entry.root),
+        start_new_session=True,
+    )
+
+    save_state(state_path, {
+        "model_id": entry.model_id,
+        "slot": slot,
+        "port": cfg.get("port"),
+        "pid": proc.pid,
+        "started_at": int(time.time()),
+        "cwd": str(entry.root),
+        "cmd": cmd,
+        "log": str(log_path),
+        "profiles": profile_names,
+        "rules": [rule_label(r) for r in rules],
+    })
+    set_active(entry)
+
+    print(f"Started: {entry.model_id}")
+    print(f"Slot   : {slot}")
+    print(f"Port   : {cfg.get('port')}")
+    print(f"PID    : {proc.pid}")
+    print(f"Log    : {log_path}")
+    print(f"Cmd    : {pretty_cmd(cmd)}")
+
+    if not args.detach:
+        try:
+            return cmd_log(
+                argparse.Namespace(model=entry.model_id, follow=True, lines=args.lines),
+                config,
+                models,
+            )
+        except KeyboardInterrupt:
+            return 130
+    return 0
+
+def find_running_slot_states() -> List[Dict[str, Any]]:
+    rows: List[Dict[str, Any]] = []
+    for sf in sorted(RUN_DIR.glob("slot-*.json")):
+        st = load_state(sf)
+        if not st:
+            continue
+        pid = int(st.get("pid", -1))
+        if not pid_alive(pid):
+            sf.unlink(missing_ok=True)
+            continue
+        row = dict(st)
+        row["_path"] = str(sf)
+        rows.append(row)
+    return rows
+
+
+def pick_running_slot_state(config: Dict[str, Any], models: List[ModelEntry]) -> Optional[Dict[str, Any]]:
+    rows = find_running_slot_states()
+    if not rows:
+        return None
+    if len(rows) == 1:
+        return rows[0]
+
+    lines: List[str] = []
+    for st in rows:
+        slot = int(st.get("slot", 1))
+        port = int(st.get("port", config.get("base_port", BUILTIN_DEFAULTS.get("port", 8080)) + (slot - 1)))
+        model_id = str(st.get("model_id", ""))
+        pid = str(st.get("pid", "-"))
+        lines.append(f"slot={slot}\tport={port}\tpid={pid}\t{model_id}")
+
+    picked = run_fzf(lines, prompt="running> ")
+    if not picked:
+        return None
+    m = re.search(r"slot=(\d+)", picked)
+    if not m:
+        return None
+    wanted_slot = int(m.group(1))
+    for st in rows:
+        if int(st.get("slot", 1)) == wanted_slot:
+            return st
+    return None
+
+
+def _stop_state_file(state_path: Path, force: bool = False) -> Tuple[bool, str]:
+    st = load_state(state_path)
+    if not st:
+        return False, f"No state: {state_path.name}"
+
+    pid = int(st.get("pid", -1))
+    if pid <= 0:
+        state_path.unlink(missing_ok=True)
+        return False, f"Invalid pid in {state_path.name}"
+
+    if not pid_alive(pid):
+        state_path.unlink(missing_ok=True)
+        return False, f"Already dead: pid {pid} (state cleaned)"
+
+    # --force means immediate SIGKILL.  Normal stop first gives llama-server
+    # time to shut down cleanly, then escalates only if it refuses to exit.
+    if force:
+        try:
+            _signal_process(pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        exited = _wait_pid_exit(pid, 2.0)
+        if exited:
+            state_path.unlink(missing_ok=True)
+            return True, f"Stopped pid {pid} (SIGKILL)"
+        return False, f"Failed to stop pid {pid}"
 
     try:
-        state = json.loads(statefile.read_text(encoding="utf-8"))
-    except Exception:
-        print("Statefile corrupted:", statefile)
-        return
+        _signal_process(pid, signal.SIGTERM)
+    except ProcessLookupError:
+        state_path.unlink(missing_ok=True)
+        return True, f"Stopped pid {pid}"
 
-    logfile = state.get("logfile")
-    if not logfile:
-        print("No logfile recorded in state.")
-        print("Tip: start via 'lls start ... -d' to persist logs.")
-        return
+    if _wait_pid_exit(pid, 10.0):
+        state_path.unlink(missing_ok=True)
+        return True, f"Stopped pid {pid}"
 
-    # logfile stored as string path
-    log_path = Path(str(logfile)).expanduser()
+    # Do not print a false success. Escalate after the grace period.
+    try:
+        _signal_process(pid, signal.SIGKILL)
+    except ProcessLookupError:
+        state_path.unlink(missing_ok=True)
+        return True, f"Stopped pid {pid}"
 
-    if not log_path.exists():
-        print("Logfile not found:", log_path)
-        print("Tip: logs are only written when started with -d/--detach.")
-        return
+    if _wait_pid_exit(pid, 2.0):
+        state_path.unlink(missing_ok=True)
+        return True, f"Stopped pid {pid} (SIGTERM timeout; SIGKILL)"
 
-    lines = int(getattr(args, "lines", 200))
-    follow = bool(getattr(args, "follow", False))
+    return False, f"Failed to stop pid {pid} after SIGTERM/SIGKILL"
 
-    if follow:
-        subprocess.run(["tail", "-n", str(lines), "-f", str(log_path)])
+
+def cmd_stop(args: argparse.Namespace, config: Dict[str, Any], models: List[ModelEntry]) -> int:
+    ensure_state_dir()
+    if args.all:
+        any_stopped = False
+        for p in sorted(RUN_DIR.glob("*.json")):
+            ok, msg = _stop_state_file(p, force=args.force)
+            print(f"{p.name}: {msg}")
+            any_stopped = any_stopped or ok
+        if ACTIVE_FILE.exists():
+            ACTIVE_FILE.unlink()
+        return 0 if any_stopped else 1
+
+    if args.active:
+        active = get_active_model_id()
+        if not active:
+            print("No active model")
+            return 1
+        entry = resolve_model(active, config, models)
+        chosen_state: Optional[Dict[str, Any]] = None
+        for st in find_running_slot_states():
+            if st.get("model_id") == entry.model_id:
+                chosen_state = st
+                break
+        state_path = Path(chosen_state["_path"]) if chosen_state else state_file_for(entry)
+        ok, msg = _stop_state_file(state_path, force=args.force)
+        print(f"{entry.model_id}: {msg}")
+        if state_path.exists() and not pid_alive(int((load_state(state_path) or {}).get("pid", -1))):
+            state_path.unlink(missing_ok=True)
+        clear_active_if(entry)
+        return 0 if ok else 1
+
+    if not args.model:
+        chosen_state = pick_running_slot_state(config, models)
+        if not chosen_state:
+            print("No running models")
+            return 1
+        state_path = Path(str(chosen_state["_path"]))
+        model_id = str(chosen_state.get("model_id", "<unknown>"))
+        entry = resolve_model(model_id, config, models)
+        ok, msg = _stop_state_file(state_path, force=args.force)
+        slot = chosen_state.get("slot", "?")
+        print(f"slot {slot} {entry.model_id}: {msg}")
+        if state_path.exists() and not pid_alive(int((load_state(state_path) or {}).get("pid", -1))):
+            state_path.unlink(missing_ok=True)
+        clear_active_if(entry)
+        return 0 if ok else 1
+
+    entry = resolve_model(args.model, config, models)
+    matching_states = [st for st in find_running_slot_states() if st.get("model_id") == entry.model_id]
+    if len(matching_states) == 1:
+        state_path = Path(str(matching_states[0]["_path"]))
+    elif len(matching_states) > 1:
+        lines: List[str] = []
+        for st in matching_states:
+            slot = int(st.get("slot", 1))
+            port = int(st.get("port", config.get("base_port", BUILTIN_DEFAULTS.get("port", 8080)) + (slot - 1)))
+            pid = str(st.get("pid", "-"))
+            lines.append(f"slot={slot}\tport={port}\tpid={pid}\t{entry.model_id}")
+        picked = run_fzf(lines, prompt="stop-slot> ")
+        if not picked:
+            return 1
+        m = re.search(r"slot=(\d+)", picked)
+        if not m:
+            return 1
+        wanted_slot = int(m.group(1))
+        chosen = next((st for st in matching_states if int(st.get("slot", 1)) == wanted_slot), None)
+        if not chosen:
+            return 1
+        state_path = Path(str(chosen["_path"]))
     else:
-        subprocess.run(["tail", "-n", str(lines), str(log_path)])
+        state_path = state_file_for(entry)
+
+    ok, msg = _stop_state_file(state_path, force=args.force)
+    print(f"{entry.model_id}: {msg}")
+    if state_path.exists() and not pid_alive(int((load_state(state_path) or {}).get("pid", -1))):
+        state_path.unlink(missing_ok=True)
+    clear_active_if(entry)
+    return 0 if ok else 1
+
+# def cmd_status(args: argparse.Namespace, config: Dict[str, Any], models: List[ModelEntry]) -> int:
+#     ensure_state_dir()
+#     active = get_active_model_id()
+#     rows: List[Tuple[str, str, str, str]] = []
+
+#     for m in models:
+#         sf = state_file_for(m)
+#         st = load_state(sf)
+#         if not st:
+#             continue
+
+#         pid = int(st.get("pid", -1))
+#         if not pid_alive(pid):
+#             sf.unlink(missing_ok=True)
+#             continue
+
+#         rows.append((
+#             "*" if active == m.model_id else " ",
+#             m.model_id,
+#             str(pid),
+#             str(st.get("log", "-")),
+#         ))
+
+#     if not rows:
+#         print("No running models")
+#         return 0
+
+#     w = max(len(r[1]) for r in rows)
+#     for mark, model_id, pid, log_path in rows:
+#         print(f"{mark} {model_id:<{w}}  pid={pid:<8}  running  log={log_path}")
+
+#     return 0
 
 
+def cmd_status(args: argparse.Namespace, config: Dict[str, Any], models: List[ModelEntry]) -> int:
+    ensure_state_dir()
+    active = get_active_model_id()
+    rows: List[Tuple[str, int, int, str, str, str]] = []
 
-# =========================
-# Log pump (RotatingFileHandler for external process stdout)
-# =========================
-def _fifo_for_port(state_dir: Path, port: int) -> Path:
-    return state_dir / f"llama_{port}.fifo"
+    for sf in sorted(RUN_DIR.glob("slot-*.json")):
+        st = load_state(sf)
+        if not st:
+            continue
 
-def _log_pump_cmd(fifo_path: Path, logfile: Path) -> list[str]:
-    # logger.info("[lls] log-pump ready")
-    return [
-        sys.executable,
-        os.path.realpath(__file__),
-        "_log_pump",
-        "--fifo", str(fifo_path),
-        "--logfile", str(logfile),
-    ]
+        pid = int(st.get("pid", -1))
+        if not pid_alive(pid):
+            sf.unlink(missing_ok=True)
+            continue
 
-def run_log_pump(args: argparse.Namespace) -> None:
-    fifo_path = Path(args.fifo)
-    logfile = Path(args.logfile)
+        model_id = str(st.get("model_id", "<unknown>"))
+        slot = int(st.get("slot", 1))
+        port = int(st.get("port", config.get("base_port", BUILTIN_DEFAULTS.get("port", 8080)) + (slot - 1)))
+        log_path = str(st.get("log", "-"))
 
-    log_max_mb = int(os.environ.get("LLS_LOG_MAX_MB", "50"))
-    log_keep = int(os.environ.get("LLS_LOG_KEEP", "5"))
+        rows.append((
+            "*" if active == model_id else " ",
+            slot,
+            port,
+            model_id,
+            str(pid),
+            log_path,
+        ))
 
-    logger = logging.getLogger("lls.log_pump")
-    logger.setLevel(logging.INFO)
-    logger.propagate = False
+    if args.ids:
+        for _, _, _, model_id, _, _ in rows:
+            print(model_id)
+        return 0
 
-    # 중복 핸들러 방지 (같은 프로세스에서 여러 번 호출될 가능성 대비)
-    if not logger.handlers:
-        handler = RotatingFileHandler(
-            logfile,
-            maxBytes=log_max_mb * 1024 * 1024,
-            backupCount=log_keep,
-            encoding="utf-8",
+    if not rows:
+        print("No running models")
+        return 0
+
+    w_model = max(len(r[3]) for r in rows)
+    w_slot = max(len(str(r[1])) for r in rows)
+    w_port = max(len(str(r[2])) for r in rows)
+    for mark, slot, port, model_id, pid, log_path in rows:
+        print(
+            f"{mark} slot={slot:<{w_slot}}  port={port:<{w_port}}  "
+            f"{model_id:<{w_model}}  pid={pid:<8}  running  log={log_path}"
         )
-        handler.setFormatter(logging.Formatter("[%(asctime)s] %(message)s", "%H:%M:%S"))
-        logger.addHandler(handler)
+    return 0
 
-    # ✅ 파일 생성 + pump 생존 표시 (중요)
-    logger.info("[lls] log-pump ready")
+# def cmd_status(args: argparse.Namespace, config: Dict[str, Any], models: List[ModelEntry]) -> int:
+#     ensure_state_dir()
+#     active = get_active_model_id()
+#     rows: List[Tuple[str, str, str, str, str]] = []
 
-    # FIFO에서 줄 단위로 읽어서 로깅 (실시간 rotate는 handler가 담당)
-    with open(fifo_path, "r", encoding="utf-8", errors="replace") as f:
-        for line in f:
-            line = line.rstrip("\n")
-            if line:
-                logger.info(line)
+#     for m in models:
+#         st = load_state(state_file_for(m))
+#         if not st:
+#             continue
 
-# def run_log_pump(args: argparse.Namespace) -> None:
-#     """Internal: read bytes from FIFO and write to a RotatingFileHandler logfile.
+#         pid = int(st.get("pid", -1))
+#         alive = pid_alive(pid)
 
-#     This exists because RotatingFileHandler only rotates when *it* writes.
-#     If we simply pass an open file handle to llama-server, rotation will never trigger.
-#     """
-#     fifo_path = Path(args.fifo).expanduser()
-#     logfile = Path(args.logfile).expanduser()
+#         if not alive:
+#             state_file_for(m).unlink(missing_ok=True)
+#             continue
 
-#     max_mb = int(os.environ.get("LLS_LOG_MAX_MB", "50"))
-#     keep = int(os.environ.get("LLS_LOG_KEEP", "5"))
+#         rows.append((
+#             "*" if active == m.model_id else " ",
+#             m.model_id,
+#             str(pid),
+#             "running",
+#             str(st.get("log", "-")),
+#         ))
 
-#     logger = logging.getLogger(f"lls.logpump.{logfile.name}")
-#     logger.setLevel(logging.INFO)
-#     logger.propagate = False
-#     handler = RotatingFileHandler(
-#         logfile,
-#         maxBytes=max_mb * 1024 * 1024,
-#         backupCount=keep,
-#         encoding="utf-8",
-#     )
-#     # Write raw lines as-is; avoid double timestamps (llama-server already timestamps sometimes)
-#     handler.setFormatter(logging.Formatter("%(message)s"))
-#     logger.addHandler(handler)
+#     if args.ids:
+#         for _, model_id, _, _ in rows:
+#             print(model_id)
+#         return 0
 
-#     # Blocking open/read loop
-#     try:
-#         with open(fifo_path, "rb", buffering=0) as r:
+#     if not rows:
+#         print("No running models")
+#         return 0
+
+#     w = max(len(r[1]) for r in rows)
+#     for mark, model_id, pid, status, log_path in rows:
+#         print(f"{mark} {model_id:<{w}}  pid={pid:<8}  {status}  log={log_path}")
+#     return 0
+
+# def cmd_status(args: argparse.Namespace, config: Dict[str, Any], models: List[ModelEntry]) -> int:
+#     ensure_state_dir()
+#     active = get_active_model_id()
+#     rows: List[Tuple[str, str, str, str, str]] = []
+#     for m in models:
+#         st = load_state(state_file_for(m))
+#         if not st:
+#             continue
+#         pid = int(st.get("pid", -1))
+#         alive = pid_alive(pid)
+#         rows.append((
+#             "*" if active == m.model_id else " ",
+#             m.model_id,
+#             str(pid),
+#             "running" if alive else "dead",
+#             str(st.get("log", "-")),
+#         ))
+#         if not alive:
+#             state_file_for(m).unlink(missing_ok=True)
+#     if not rows:
+#         print("No running models")
+#         return 0
+
+#     w = max(len(r[1]) for r in rows)
+#     for mark, model_id, pid, status, log_path in rows:
+#         print(f"{mark} {model_id:<{w}}  pid={pid:<8}  {status}  log={log_path}")
+#     return 0
+
+
+def _tail_file(path: Path, lines: int) -> None:
+    if not path.exists():
+        print(f"No log file: {path}")
+        return
+
+    with path.open("rb") as f:
+        try:
+            f.seek(0, os.SEEK_END)
+            end = f.tell()
+            block = 4096
+            data = b""
+
+            while end > 0 and data.count(b"\n") <= lines:
+                read_size = min(block, end)
+                end -= read_size
+                f.seek(end)
+                data = f.read(read_size) + data
+                if end == 0:
+                    break
+
+            text = data.decode("utf-8", errors="replace")
+        except Exception:
+            text = path.read_text(encoding="utf-8", errors="replace")
+
+    out_lines = text.splitlines()[-lines:]
+    if out_lines:
+        print("\n".join(out_lines))
+
+def _follow_file(path: Path, tail_lines: int = 30) -> int:
+    if not path.exists():
+        print(f"No log file: {path}")
+        return 1
+
+    with path.open("r", encoding="utf-8", errors="replace") as f:
+        if tail_lines > 0:
+            lines = f.readlines()
+            for line in lines[-tail_lines:]:
+                print(line, end="")
+            sys.stdout.flush()
+
+        try:
+            while True:
+                line = f.readline()
+                if line:
+                    print(line, end="")
+                    sys.stdout.flush()
+                else:
+                    time.sleep(0.2)
+        except KeyboardInterrupt:
+            return 130
+
+
+# def _follow_file(path: Path) -> int:
+#     if not path.exists():
+#         print(f"No log file: {path}")
+#         return 1
+#     with path.open("r", encoding="utf-8", errors="replace") as f:
+#         f.seek(0, os.SEEK_END)
+#         try:
 #             while True:
-#                 chunk = r.readline()
-#                 if not chunk:
-#                     break
-#                 line = chunk.decode("utf-8", errors="replace").rstrip("\n")
-#                 logger.info(line)
-#     finally:
-#         try:
-#             handler.flush()
-#             handler.close()
-#         except Exception:
-#             pass
-#         for h in list(logger.handlers):
-#             try:
-#                 logger.removeHandler(h)
-#             except Exception:
-#                 pass
-#         # Best-effort cleanup of FIFO (stop may also remove it)
-#         try:
-#             fifo_path.unlink(missing_ok=True)
-#         except Exception:
-#             pass
+#                 line = f.readline()
+#                 if line:
+#                     print(line, end="")
+#                     sys.stdout.flush()
+#                 else:
+#                     time.sleep(0.2)
+#         except KeyboardInterrupt:
+#             return 130
 
 
-def main() -> None:
-    ap = argparse.ArgumentParser(prog="lls")
-    sub = ap.add_subparsers(dest="cmd", required=True)
+def _resolve_log_target(args: argparse.Namespace, config: Dict[str, Any], models: List[ModelEntry]) -> Dict[str, Any]:
+    rows = find_running_slot_states()
+    if not rows:
+        raise SystemExit("No running models")
 
-    sp = sub.add_parser("start", help="start llama-server with a model")
-    sp.add_argument("model", help="model filename or substring")
-    sp.add_argument("-d", "--detach", action="store_true", help="run in background (no live logs)")
-    sp.add_argument("--host", help="override host for this run")
-    sp.add_argument("--port", type=int, help="override port for this run")
-    sp.add_argument("overrides", nargs=argparse.REMAINDER, help="temporary overrides like --ctx 8192 --batch 512 (also accepts -d)")
-    sp.set_defaults(func=run_start)
+    model_arg = getattr(args, "model", None)
+    slot_arg = None
+    if model_arg and str(model_arg).isdigit():
+        slot_arg = int(model_arg)
+        model_arg = None
 
-    sp = sub.add_parser("stop", help="stop llama-server")
-    sp.add_argument("--port", type=int, default=int(os.environ.get("LLAMA_PORT", "8080")))
-    sp.set_defaults(func=run_stop)
+    if slot_arg is not None:
+        for st in rows:
+            if int(st.get("slot", 1)) == slot_arg:
+                return st
+        raise SystemExit(f"slot {slot_arg} not found")
 
-    sp = sub.add_parser("status", help="show status")
-    sp.add_argument("--port", type=int, default=int(os.environ.get("LLAMA_PORT", "8080")))
-    sp.set_defaults(func=run_status)
+    if model_arg:
+        for st in rows:
+            if st.get("model_id") == model_arg:
+                return st
+        raise SystemExit(f"Model not running: {model_arg}")
 
-    sp = sub.add_parser("list", help="list gguf models")
-    sp.set_defaults(func=run_list)
+    if len(rows) == 1:
+        return rows[0]
 
-    sp = sub.add_parser("show-profile", help="show resolved params for a model (from config)")
-    sp.add_argument("model", help="model filename (or substring, like start)")
-    sp.add_argument("--platform", choices=["wsl", "mac"], help="platform profile (or set $LLS_PLATFORM)")
-    sp.add_argument("--config", default=str(DEFAULT_CONFIG_PATH), help="path to config.jsonc")
-    sp.add_argument("--host", help="override host for preview")
-    sp.add_argument("--port", type=int, help="override port for preview")
-    sp.set_defaults(func=run_show_profile)
+    lines: List[str] = []
+    for st in rows:
+        slot = int(st.get("slot", 1))
+        port = int(st.get("port", config.get("base_port", BUILTIN_DEFAULTS.get("port", 8080)) + (slot - 1)))
+        model_id = str(st.get("model_id", ""))
+        pid = str(st.get("pid", "-"))
+        lines.append(f"slot={slot}	port={port}	pid={pid}	{model_id}")
 
-    sp = sub.add_parser("info", help="show current running model/port/log/cmd")
-    sp.add_argument("--port", type=int, default=int(os.environ.get("LLAMA_PORT", "8080")))
-    sp.set_defaults(func=run_info)
-
-    sp = sub.add_parser("log", help="show logs for current session")
-    sp.add_argument("--port", type=int, default=int(os.environ.get("LLAMA_PORT", "8080")))
-    sp.add_argument("-f", "--follow", action="store_true", help="follow (tail -f)")
-    sp.add_argument("-n", "--lines", type=int, default=200, help="number of lines")
-    sp.set_defaults(func=run_log)
-
-    # --- internal: log pump (hidden) ---
-    sp = sub.add_parser("_log_pump", help=argparse.SUPPRESS)
-    sp.add_argument("--fifo", required=True)
-    sp.add_argument("--logfile", required=True)
-    sp.set_defaults(func=run_log_pump)
-
+    picked = run_fzf(lines, prompt="log> ")
+    if not picked:
+        raise SystemExit(1)
+    m = re.search(r"slot=(\d+)", picked)
+    if not m:
+        raise SystemExit(1)
+    wanted_slot = int(m.group(1))
+    for st in rows:
+        if int(st.get("slot", 1)) == wanted_slot:
+            return st
+    raise SystemExit(1)
 
 
+def cmd_log(args: argparse.Namespace, config: Dict[str, Any], models: List[ModelEntry]) -> int:
+    ensure_state_dir()
+    state = _resolve_log_target(args, config, models)
 
-    args = ap.parse_args()
-    args.func(args)
+    path_str = state.get("log") or state.get("log_path")
+    path = Path(path_str) if path_str else None
+    if not path:
+        print("No log file recorded for selected model")
+        return 1
+
+    _tail_file(path, args.lines)
+    if args.follow:
+        return _follow_file(path)
+    return 0
+
+def cmd_action(args: argparse.Namespace, config: Dict[str, Any], models: List[ModelEntry]) -> int:
+    action = run_action_picker()
+    if not action:
+        return 1
+    if action == "start":
+        ns = argparse.Namespace(slot_or_model=None, model=None, port=None, ctx=None, detach=False, lines=30)
+        return cmd_start(ns, config, models)
+    if action == "stop":
+        ns = argparse.Namespace(model=None, all=False, active=True, force=False)
+        return cmd_stop(ns, config, models)
+    if action == "status":
+        ns = argparse.Namespace()
+        return cmd_status(ns, config, models)
+    if action == "log":
+        ns = argparse.Namespace(model=None, follow=True, lines=30)
+        return cmd_log(ns, config, models)
+    if action == "show-profile":
+        ns = argparse.Namespace(model=None, port=None)
+        return cmd_show_profile(ns, config, models)
+    if action == "pick":
+        ns = argparse.Namespace()
+        return cmd_pick(ns, config, models)
+    return 1
+
+
+# -----------------------------
+# CLI
+# -----------------------------
+
+def load_main_config(path: Path) -> Dict[str, Any]:
+    if not path.exists():
+        return {}
+    return load_jsonc(path)
+
+
+def build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(prog="lls", description="Local LLM launcher/manager")
+    p.add_argument("--config", default=str(DEFAULT_CONFIG), help="Path to config.jsonc")
+    p.add_argument("--models-dir", default=os.environ.get("LLS_MODELS_DIR"), help="Override models dir")
+
+    sub = p.add_subparsers(dest="cmd", required=True)
+
+    sp = sub.add_parser("list", help="List discovered models")
+    sp.set_defaults(func=cmd_list)
+    sp.add_argument("--ids", action="store_true", help="Print model IDs only")
+
+    sp = sub.add_parser("pick", help="Pick a model via fzf and print it")
+    sp.set_defaults(func=cmd_pick)
+
+    sp = sub.add_parser("action", help="fzf action menu")
+    sp.set_defaults(func=cmd_action)
+
+    sp = sub.add_parser("show-profile", help="Show resolved config/profile for a model")
+    sp.add_argument("model", nargs="?", help="publisher/model, alias, or fuzzy text")
+    sp.add_argument("--port", type=int)
+    sp.set_defaults(func=cmd_show_profile)
+
+    sp = sub.add_parser("start", help="Start a model server")
+    sp.add_argument("slot_or_model", nargs="?", help="slot number or publisher/model, alias, or fuzzy text")
+    sp.add_argument("model", nargs="?", help="publisher/model, alias, or fuzzy text when slot is provided")
+    sp.add_argument("--port", type=int)
+    sp.add_argument("--ctx", type=int)
+    sp.add_argument("-d", "--detach", action="store_true", help="Start and return immediately")
+    sp.add_argument("-n", "--lines", type=int, default=30, help="Initial log lines before follow")
+    sp.set_defaults(func=cmd_start)
+
+    sp = sub.add_parser("stop", help="Stop a running model")
+    sp.add_argument("model", nargs="?", help="publisher/model, alias, or fuzzy text")
+    sp.add_argument("--all", action="store_true")
+    sp.add_argument("--active", action="store_true")
+    sp.add_argument("--force", action="store_true")
+    sp.set_defaults(func=cmd_stop)
+
+    sp = sub.add_parser("status", help="Show running models")
+    sp.set_defaults(func=cmd_status)
+    sp.add_argument("--ids", action="store_true", help="Print running model IDs only")
+
+    sp = sub.add_parser("log", help="Show or follow logs")
+    sp.add_argument("model", nargs="?", help="publisher/model, alias, or fuzzy text")
+    sp.add_argument("-f", "--follow", action="store_true", help="Follow log output")
+    sp.add_argument("-n", "--lines", type=int, default=30, help="Tail last N lines first")
+    sp.set_defaults(func=cmd_log)
+
+    return p
+
+
+def main() -> int:
+    parser = build_parser()
+    args = parser.parse_args()
+
+    config_path = Path(args.config).expanduser()
+    config = load_main_config(config_path)
+
+    models_dir = args.models_dir or config.get("models_dir") or os.environ.get("LLS_MODELS_DIR")
+    if not models_dir:
+        raise SystemExit("models_dir not set. Use --models-dir, LLS_MODELS_DIR, or config.jsonc")
+
+    models = discover_models(Path(models_dir).expanduser())
+    return args.func(args, config, models)
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
+
